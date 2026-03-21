@@ -1,0 +1,23 @@
+# Corkboard config fragment for My App
+# Deploy to config.d/myapp.yaml
+
+app_slug: "myapp"
+domains:
+  - "myapp.example.com"
+app_name: "My App"
+dev_api_key: "change-me"
+theme_file: "/path/to/corkboard-theme.json"
+categories:
+  general:
+    - "General"
+    - "How do I...?"
+  structured:
+    - "Bug Report"
+    - "Feature Request"
+webhooks: []
+  # - url: "https://hooks.slack.com/..."
+  #   events: ["new_structured", "status_change"]
+rate_limits:
+  posts_per_hour: 5
+  comments_per_hour: 20
+anonymous_access: "read_only"  # "read_only" | "none" | "post_allowed"

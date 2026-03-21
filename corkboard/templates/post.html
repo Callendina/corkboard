@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}#{{ post.post_number }}: {{ post.title }}{% endblock %}
+{% block content %}
+<article class="post-detail">
+  <div class="post-header">
+    <h1>#{{ post.post_number }}: {{ post.title }}</h1>
+    <div class="post-meta">
+      <span>{{ post.category }}</span>
+      {% if post.status %}
+        <span class="status-badge status-{{ post.status }}">{{ post.status }}</span>
+      {% endif %}
+      <span>by {{ mask_author(post.author_email, user.role, post.post_number) }}</span>
+      <span>{{ post.created_at.strftime('%Y-%m-%d %H:%M') if post.created_at else '' }}</span>
+      {% if post.scrubbed %}
+        <span class="scrubbed-notice" title="Some sensitive content was automatically removed">Scrubbed</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="post-body">{{ post.body_html | safe }}</div>
+
+  {% if post.dev_note %}
+  <div class="dev-note">
+    <strong>Developer note:</strong> {{ post.dev_note }}
+  </div>
+  {% endif %}
+
+  <div class="post-actions">
+    {% if user.email %}
+    <form method="POST" action="{{ prefix }}/post/{{ post.post_number }}/vote" style="display:inline">
+      <button type="submit" class="btn btn-vote {{ 'voted' if user_voted }}">
+        ▲ {{ post.vote_count }}
+      </button>
+    </form>
+    {% else %}
+      <span class="vote-count">▲ {{ post.vote_count }}</span>
+    {% endif %}
+
+    {% if user.is_admin or user.email == post.author_email %}
+    <form method="POST" action="{{ prefix }}/post/{{ post.post_number }}/delete" style="display:inline"
+          onsubmit="return confirm('Delete this post?')">
+      <button type="submit" class="btn btn-danger">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</article>
+
+<section class="comments">
+  <h2>Comments ({{ comments | length }})</h2>
+
+  {% for comment in comments %}
+  <div class="comment {{ 'comment-dev' if comment.is_dev_comment }} {{ 'comment-system' if comment.is_system_comment }}">
+    <div class="comment-meta">
+      {% if comment.is_system_comment %}
+        <span class="badge badge-system">System</span>
+      {% elif comment.is_dev_comment %}
+        <span class="badge badge-dev">Developer</span>
+      {% endif %}
+      <span>{{ mask_author(comment.author_email, user.role, post.post_number) }}</span>
+      <span>{{ comment.created_at.strftime('%Y-%m-%d %H:%M') if comment.created_at else '' }}</span>
+      {% if comment.scrubbed %}
+        <span class="scrubbed-notice">Scrubbed</span>
+      {% endif %}
+      {% if user.is_admin %}
+      <form method="POST" action="{{ prefix }}/admin/comment/{{ comment.id }}/delete" style="display:inline">
+        <button type="submit" class="btn-small btn-danger">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="comment-body">{{ comment.body_html | safe }}</div>
+  </div>
+  {% endfor %}
+
+  {% if user.role != "anon" %}
+  <form method="POST" action="{{ prefix }}/post/{{ post.post_number }}/comment" class="comment-form">
+    <textarea name="body" rows="4" placeholder="Write a comment (Markdown supported)..." required></textarea>
+    <button type="submit" class="btn btn-primary">Comment</button>
+  </form>
+  {% else %}
+  <p class="sign-in-prompt"><a href="/_auth/login?next={{ prefix }}/post/{{ post.post_number }}">Sign in</a> to comment.</p>
+  {% endif %}
+</section>
+{% endblock %}

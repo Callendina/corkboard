@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h1>Moderation — {{ app.app_name }}</h1>
+
+<table class="post-list">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Title</th>
+      <th>Author</th>
+      <th>Status</th>
+      <th>Deleted</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for post in posts %}
+    <tr class="{{ 'deleted' if post.deleted_at }}">
+      <td>{{ post.post_number }}</td>
+      <td><a href="{{ prefix }}/post/{{ post.post_number }}">{{ post.title }}</a></td>
+      <td>{{ post.author_email }}</td>
+      <td>{{ post.status or post.board_type }}</td>
+      <td>{{ post.deleted_at.strftime('%Y-%m-%d') if post.deleted_at else '' }}</td>
+      <td>
+        {% if not post.deleted_at %}
+        <form method="POST" action="{{ prefix }}/admin/post/{{ post.post_number }}/delete"
+              style="display:inline" onsubmit="return confirm('Delete?')">
+          <button type="submit" class="btn-small btn-danger">Delete</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

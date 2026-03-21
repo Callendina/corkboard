@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Corkboard{% endblock %} — {{ app.app_name }}</title>
+<link rel="stylesheet" href="{{ prefix }}/static/style.css">
+<style>
+  :root {
+    --cb-bg: #1a1a2e;
+    --cb-surface: #16213e;
+    --cb-text: #e0e0e0;
+    --cb-accent: #32aadd;
+    --cb-border: #1f2937;
+    --cb-font: system-ui, sans-serif;
+    --cb-muted: #64748b;
+    --cb-danger: #ef4444;
+    --cb-success: #22c55e;
+  }
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<nav class="topbar">
+  <div class="topbar-left">
+    <a href="{{ prefix }}/" class="topbar-brand">{{ app.app_name }} — Corkboard</a>
+  </div>
+  <div class="topbar-right">
+    {% if user.role != "anon" %}
+      <span class="topbar-user">{{ user.display_name }}{% if user.is_admin %} (admin){% endif %}</span>
+    {% else %}
+      <a href="/_auth/login?next={{ prefix }}/" class="topbar-link">Sign In</a>
+    {% endif %}
+    <a href="/" class="topbar-link">Back to {{ app.app_name }}</a>
+  </div>
+</nav>
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
