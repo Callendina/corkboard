@@ -80,7 +80,6 @@ class CorkboardConfig:
     secret_key: str = ""
     database_url: str = "sqlite+aiosqlite:///corkboard.db"
     mount_prefix: str = "/corkboard"
-    upload_dir: str = "./uploads"
     apps: dict[str, AppConfig] = field(default_factory=dict)
 
     def app_for_domain(self, domain: str) -> AppConfig | None:
@@ -146,7 +145,6 @@ def load_config(path: str = "config.yaml") -> CorkboardConfig:
         secret_key=server.get("secret_key", ""),
         database_url=server.get("database_url", "sqlite+aiosqlite:///corkboard.db"),
         mount_prefix=server.get("mount_prefix", "/corkboard"),
-        upload_dir=server.get("upload_dir", "./uploads"),
     )
 
     # Load apps from main config

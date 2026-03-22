@@ -22,9 +22,6 @@ async def lifespan(app: FastAPI):
     init_admin_routes(config)
     init_dev_api_routes(config)
 
-    # Ensure upload directory exists
-    Path(config.upload_dir).mkdir(parents=True, exist_ok=True)
-
     yield
 
 

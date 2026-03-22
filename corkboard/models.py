@@ -49,7 +49,6 @@ class Post(Base):
     comments: Mapped[list["Comment"]] = relationship(back_populates="post")
     votes: Mapped[list["Vote"]] = relationship(back_populates="post")
     tags: Mapped[list["ItemTag"]] = relationship(back_populates="post")
-    attachments: Mapped[list["Attachment"]] = relationship(back_populates="post")
 
     @property
     def fields(self) -> dict:
@@ -118,18 +117,3 @@ class ItemTag(Base):
     )
 
 
-class Attachment(Base):
-    __tablename__ = "attachments"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), nullable=False)
-    filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    stored_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    uploaded_by_email: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, default=datetime.datetime.utcnow
-    )
-    deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
-
-    post: Mapped["Post"] = relationship(back_populates="attachments")

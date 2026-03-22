@@ -5,19 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Corkboard{% endblock %} — {{ app.app_name }}</title>
 <link rel="stylesheet" href="{{ prefix }}/static/style.css">
-<style>
-  :root {
-    --cb-bg: #1a1a2e;
-    --cb-surface: #16213e;
-    --cb-text: #e0e0e0;
-    --cb-accent: #32aadd;
-    --cb-border: #1f2937;
-    --cb-font: system-ui, sans-serif;
-    --cb-muted: #64748b;
-    --cb-danger: #ef4444;
-    --cb-success: #22c55e;
-  }
-</style>
+{% if theme and theme.favicon_url %}<link rel="icon" href="{{ theme.favicon_url }}">{% endif %}
+{% if theme_css %}<style>{{ theme_css }}</style>{% endif %}
 {% block head %}{% endblock %}
 </head>
 <body>
@@ -36,7 +25,7 @@
     {% else %}
       <a href="/_auth/login?next={{ prefix }}/" class="topbar-link">Sign In</a>
     {% endif %}
-    <a href="/" class="topbar-link">Back to {{ app.app_name }}</a>
+    <a href="{{ theme.back_url if theme and theme.back_url else '/' }}" class="topbar-link">{{ theme.back_label if theme and theme.back_label else 'Back to ' + app.app_name }}</a>
   </div>
 </nav>
 <main class="container">

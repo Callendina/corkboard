@@ -4,4 +4,3 @@ server:
   secret_key: "change-me"
   database_url: "sqlite+aiosqlite:///corkboard.db"
   mount_prefix: "/corkboard"
-  upload_dir: "./uploads"

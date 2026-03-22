@@ -1,7 +1,6 @@
 """Forum UI routes — forum listing, posts, comments, voting."""
 import datetime
 import json
-import markdown
 from fastapi import APIRouter, Request, Depends, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -13,6 +12,9 @@ from corkboard.database import get_db
 from corkboard.config import CorkboardConfig, AppConfig, ForumConfig, POST_TYPE_FIELDS
 from corkboard.auth import RequestUser, get_current_user
 from corkboard.scrub import scrub_sensitive, mask_author
+from corkboard.rendering import render_markdown
+from corkboard.theme import theme_css_override, theme_meta
+from corkboard.rate_limit import check_post_rate, check_comment_rate
 from corkboard.models import Post, Comment, Vote, AppCounter
 
 router = APIRouter()
@@ -25,6 +27,13 @@ def init_board_routes(config: CorkboardConfig):
     _config = config
     templates.env.globals["mask_author"] = mask_author
     templates.env.globals["POST_TYPE_FIELDS"] = POST_TYPE_FIELDS
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host
 
 
 def _get_app(request: Request) -> AppConfig:
@@ -58,7 +67,7 @@ async def _next_post_number(db: AsyncSession, app_slug: str) -> int:
 
 
 def _render_markdown(text: str) -> str:
-    return markdown.markdown(text, extensions=["fenced_code", "tables", "nl2br"])
+    return render_markdown(text)
 
 
 def _base_context(request: Request, app: AppConfig, user: RequestUser, **extra):
@@ -68,6 +77,8 @@ def _base_context(request: Request, app: AppConfig, user: RequestUser, **extra):
         "user": user,
         "prefix": _config.mount_prefix,
         "visible_forums": app.forums_visible_to(user.role),
+        "theme_css": theme_css_override(app.theme_file),
+        "theme": theme_meta(app.theme_file),
     }
     ctx.update(extra)
     return ctx
@@ -185,6 +196,10 @@ async def create_post(
     if user.role not in forum.post_roles:
         raise HTTPException(status_code=403, detail="Not authorised to post in this forum")
 
+    identifier = user.email or _get_client_ip(request)
+    if not check_post_rate(identifier, app.rate_limits.posts_per_hour):
+        raise HTTPException(status_code=429, detail="Post rate limit exceeded. Try again later.")
+
     form = await request.form()
     title = form.get("title", "").strip()
     body = form.get("body", "").strip()
@@ -299,6 +314,10 @@ async def add_comment(
     forum = app.get_forum(post.forum_slug)
     if forum and user.role not in forum.post_roles:
         raise HTTPException(status_code=403, detail="Sign in to comment")
+
+    identifier = user.email or _get_client_ip(request)
+    if not check_comment_rate(identifier, app.rate_limits.comments_per_hour):
+        raise HTTPException(status_code=429, detail="Comment rate limit exceeded. Try again later.")
 
     body, was_scrubbed = scrub_sensitive(body)
     body_html = _render_markdown(body)

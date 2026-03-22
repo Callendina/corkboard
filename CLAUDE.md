@@ -156,7 +156,7 @@ This happens at render time. Full emails are stored in the DB (needed for dev AP
 - **Python 3.11+** with **FastAPI** and **uvicorn**
 - **SQLite** via SQLAlchemy async (aiosqlite)
 - **Jinja2** templates for forum UI
-- **Markdown** library for rendering post/comment bodies (server-side, at write time)
+- **Markdown** + **bleach** for rendering post/comment bodies (server-side, at write time, HTML sanitised)
 - **ProxyHeadersMiddleware** to trust X-Forwarded-* from Caddy
 
 ## Project structure
@@ -167,6 +167,9 @@ corkboard/
   config.py           - YAML config loading (main + config.d/ fragments)
   database.py         - SQLAlchemy async engine/session setup
   models.py           - All database models
+  rendering.py        - Markdown rendering with bleach HTML sanitisation
+  theme.py            - Per-app theme loading from JSON files
+  rate_limit.py       - In-memory write rate limiting for posts/comments
   scrub.py            - Write-time PII scrubbing + read-time email masking
   auth.py             - Read X-Gatekeeper-* headers, RequestUser dependency
   routes/

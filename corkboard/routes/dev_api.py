@@ -5,7 +5,7 @@ Not exposed to end users.
 """
 import datetime
 import json
-import markdown
+from corkboard.rendering import render_markdown
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import select, func
@@ -238,7 +238,7 @@ async def update_item(
         comment = Comment(
             post_id=post.id,
             body_markdown=msg,
-            body_html=markdown.markdown(msg),
+            body_html=render_markdown(msg),
             author_email="system",
             author_role="admin",
             is_system_comment=True,
@@ -292,7 +292,7 @@ async def bulk_update_items(
             comment = Comment(
                 post_id=post.id,
                 body_markdown=msg,
-                body_html=markdown.markdown(msg),
+                body_html=render_markdown(msg),
                 author_email="system",
                 author_role="admin",
                 is_system_comment=True,
@@ -348,7 +348,7 @@ async def move_item(
     comment = Comment(
         post_id=post.id,
         body_markdown=msg,
-        body_html=markdown.markdown(msg),
+        body_html=render_markdown(msg),
         author_email="system",
         author_role="admin",
         is_system_comment=True,
@@ -377,7 +377,7 @@ async def dev_comment(
     comment = Comment(
         post_id=post.id,
         body_markdown=text,
-        body_html=markdown.markdown(text),
+        body_html=render_markdown(text),
         author_email="developer",
         author_role="admin",
         is_dev_comment=True,
@@ -430,7 +430,7 @@ async def create_todo(
         post_type=post_type,
         title=title,
         body_markdown=body_text,
-        body_html=markdown.markdown(body_text) if body_text else "",
+        body_html=render_markdown(body_text) if body_text else "",
         fields_json=json.dumps(fields_data) if fields_data else None,
         author_email="developer",
         author_role="admin",
