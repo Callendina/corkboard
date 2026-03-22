@@ -11,6 +11,9 @@
 {% block head %}{% endblock %}
 </head>
 <body>
+{% if header_html %}
+{{ header_html | safe }}
+{% else %}
 <nav class="topbar">
   <div class="topbar-left">
     <a href="{{ prefix }}/" class="topbar-brand">{{ app.app_name }} — Corkboard</a>
@@ -29,6 +32,7 @@
     <a href="{{ theme.back_url if theme and theme.back_url else '/' }}" class="topbar-link">{{ theme.back_label if theme and theme.back_label else 'Back to ' + app.app_name }}</a>
   </div>
 </nav>
+{% endif %}
 <main class="container">
   {% block content %}{% endblock %}
 </main>

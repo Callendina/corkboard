@@ -80,9 +80,39 @@ def theme_meta(theme_file: str) -> dict:
         "back_url": data.get("back_url", "/"),
         "back_label": data.get("back_label", "Back"),
         "head_js": data.get("head_js", ""),
+        "header_html_file": data.get("header_html_file", ""),
     }
+
+
+# Cache for header HTML files: {path: raw_content}
+_header_cache: dict[str, str] = {}
+
+
+def load_header_html(header_html_file: str, prefix: str, user_display: str,
+                     user_role: str, forum_nav_html: str, app_name: str) -> str:
+    """Load and render a custom header HTML fragment with placeholder replacement."""
+    if not header_html_file:
+        return ""
+
+    if header_html_file not in _header_cache:
+        try:
+            with open(header_html_file) as f:
+                _header_cache[header_html_file] = f.read()
+            logger.info(f"Loaded header HTML from {header_html_file}")
+        except FileNotFoundError:
+            logger.warning(f"Header HTML file not found: {header_html_file}")
+            return ""
+
+    html = _header_cache[header_html_file]
+    html = html.replace("{{CORKBOARD_PREFIX}}", prefix)
+    html = html.replace("{{CORKBOARD_USER}}", user_display)
+    html = html.replace("{{CORKBOARD_USER_ROLE}}", user_role)
+    html = html.replace("{{CORKBOARD_FORUM_NAV}}", forum_nav_html)
+    html = html.replace("{{CORKBOARD_APP_NAME}}", app_name)
+    return html
 
 
 def clear_cache():
     """Clear the theme cache (call on config reload)."""
     _theme_cache.clear()
+    _header_cache.clear()

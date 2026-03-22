@@ -13,7 +13,7 @@ from corkboard.config import CorkboardConfig, AppConfig, ForumConfig, POST_TYPE_
 from corkboard.auth import RequestUser, get_current_user
 from corkboard.scrub import scrub_sensitive, mask_author
 from corkboard.rendering import render_markdown
-from corkboard.theme import theme_css_override, theme_meta
+from corkboard.theme import theme_css_override, theme_meta, load_header_html
 from corkboard.rate_limit import check_post_rate, check_comment_rate
 from corkboard.models import Post, Comment, Vote, AppCounter
 
@@ -71,14 +71,35 @@ def _render_markdown(text: str) -> str:
 
 
 def _base_context(request: Request, app: AppConfig, user: RequestUser, **extra):
+    meta = theme_meta(app.theme_file)
+    visible_forums = app.forums_visible_to(user.role)
+    prefix = _config.mount_prefix
+
+    # Build custom header if configured
+    header_html = ""
+    if meta.get("header_html_file"):
+        forum_nav = " ".join(
+            f'<a href="{prefix}/f/{f.slug}">{f.name}</a>'
+            for f in visible_forums
+        )
+        header_html = load_header_html(
+            meta["header_html_file"],
+            prefix=prefix,
+            user_display=user.display_name if user.role != "anon" else "",
+            user_role=user.role,
+            forum_nav_html=forum_nav,
+            app_name=app.app_name,
+        )
+
     ctx = {
         "request": request,
         "app": app,
         "user": user,
-        "prefix": _config.mount_prefix,
-        "visible_forums": app.forums_visible_to(user.role),
+        "prefix": prefix,
+        "visible_forums": visible_forums,
         "theme_css": theme_css_override(app.theme_file),
-        "theme": theme_meta(app.theme_file),
+        "theme": meta,
+        "header_html": header_html,
     }
     ctx.update(extra)
     return ctx
