@@ -312,8 +312,8 @@ async def add_comment(
         raise HTTPException(status_code=404, detail="Post not found")
 
     forum = app.get_forum(post.forum_slug)
-    if forum and user.role not in forum.post_roles:
-        raise HTTPException(status_code=403, detail="Sign in to comment")
+    if forum and user.role not in forum.comment_roles:
+        raise HTTPException(status_code=403, detail="Not authorised to comment in this forum")
 
     identifier = user.email or _get_client_ip(request)
     if not check_comment_rate(identifier, app.rate_limits.comments_per_hour):

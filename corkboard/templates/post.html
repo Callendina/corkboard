@@ -103,7 +103,7 @@
     </div>
     {% endfor %}
 
-    {% if forum and user.role in forum.post_roles %}
+    {% if forum and user.role in forum.comment_roles %}
     <form method="POST" action="{{ prefix }}/post/{{ post.post_number }}/comment" class="comment-form">
         <textarea name="body" rows="4" placeholder="Write a comment (Markdown supported)..." required></textarea>
         <button type="submit" class="btn btn-primary">Comment</button>

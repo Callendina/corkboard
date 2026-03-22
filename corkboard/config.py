@@ -53,6 +53,7 @@ class ForumConfig:
     post_types: list[str] = field(default_factory=lambda: ["general"])
     read_roles: list[str] = field(default_factory=lambda: ["anon", "user", "admin"])
     post_roles: list[str] = field(default_factory=lambda: ["user", "admin"])
+    comment_roles: list[str] = field(default_factory=lambda: ["user", "admin"])
     sort_order: int = 0
 
 
@@ -106,13 +107,15 @@ class CorkboardConfig:
 
 
 def _parse_forum(raw: dict, index: int) -> ForumConfig:
+    post_roles = raw.get("post_roles", ["user", "admin"])
     return ForumConfig(
         slug=raw.get("slug", f"forum-{index}"),
         name=raw.get("name", raw.get("slug", f"Forum {index}")),
         forum_type=raw.get("type", "general"),
         post_types=raw.get("post_types", ["general"]),
         read_roles=raw.get("read_roles", ["anon", "user", "admin"]),
-        post_roles=raw.get("post_roles", ["user", "admin"]),
+        post_roles=post_roles,
+        comment_roles=raw.get("comment_roles", post_roles),
         sort_order=raw.get("sort_order", index),
     )
 
