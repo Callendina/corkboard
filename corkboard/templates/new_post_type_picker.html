@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block title %}New Post — {{ forum.name }}{% endblock %}
 {% block content %}
+<div class="breadcrumb" style="font-size:13px;margin-bottom:8px">
+    <a href="{{ prefix }}/">All Forums</a>
+    <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>
+    <a href="{{ prefix }}/f/{{ forum.slug }}">{{ forum.name }}</a>
+    <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>
+    <span style="color:var(--cb-muted)">New Post</span>
+</div>
 <h1>New Post in {{ forum.name }}</h1>
 <p style="margin-bottom:1.5rem; color:var(--cb-muted);">What kind of post?</p>
 

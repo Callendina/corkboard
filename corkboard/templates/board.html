@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ forum.name }}{% endblock %}
 {% block content %}
+<div class="breadcrumb" style="font-size:13px;margin-bottom:8px">
+    <a href="{{ prefix }}/">All Forums</a>
+    <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>
+    <span style="color:var(--cb-muted)">{{ forum.name }}</span>
+</div>
 <div class="board-header">
     <h1>{{ forum.name }}</h1>
     <div class="board-actions">
