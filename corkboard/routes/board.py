@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 
 from corkboard.database import get_db
-from corkboard.config import CorkboardConfig, AppConfig, ForumConfig, POST_TYPE_FIELDS
+from corkboard.config import CorkboardConfig, AppConfig, ForumConfig, POST_TYPE_FIELDS, POST_TYPE_INITIAL_STATUS
 from corkboard.auth import RequestUser, get_current_user
 from corkboard.scrub import scrub_sensitive, mask_author
 from corkboard.rendering import render_markdown
@@ -226,7 +226,7 @@ async def create_post(
 
     body_html = _render_markdown(body) if body else ""
     post_number = await _next_post_number(db, app.slug)
-    status = "open" if forum.forum_type == "lifecycle" else None
+    status = POST_TYPE_INITIAL_STATUS.get(post_type) if forum.forum_type == "lifecycle" else None
 
     post = Post(
         app_slug=app.slug,

@@ -12,13 +12,14 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from corkboard.database import get_db
-from corkboard.config import CorkboardConfig, AppConfig, POST_TYPE_FIELDS
+from corkboard.config import CorkboardConfig, AppConfig, POST_TYPE_FIELDS, POST_TYPE_STATUSES, POST_TYPE_INITIAL_STATUS
 from corkboard.models import Post, Comment, ItemTag
 
 router = APIRouter(prefix="/api/dev")
 _config: CorkboardConfig = None
 
-VALID_STATUSES = {"open", "acknowledged", "in_progress", "done", "wont_fix", "duplicate"}
+def _valid_statuses_for(post_type: str) -> set[str]:
+    return POST_TYPE_STATUSES.get(post_type, POST_TYPE_STATUSES["bug"])
 
 
 def init_dev_api_routes(config: CorkboardConfig):
@@ -49,6 +50,7 @@ def _post_to_dict(post: Post, include_comments: bool = False) -> dict:
         "author_email": post.author_email,
         "vote_count": post.vote_count,
         "dev_note": post.dev_note,
+        "done_version": post.done_version,
         "fields": post.fields,
         "tags": [t.tag for t in post.tags] if post.tags else [],
         "moved_from_forum": post.moved_from_forum,
@@ -224,16 +226,23 @@ async def update_item(
 
     new_status = body.get("status")
     dev_note = body.get("dev_note")
+    done_version = body.get("done_version")
 
     if new_status:
-        if new_status not in VALID_STATUSES:
-            raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}")
+        valid = _valid_statuses_for(post.post_type)
+        if new_status not in valid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status '{new_status}' for {post.post_type}. Valid: {sorted(valid)}"
+            )
         old_status = post.status
         post.status = new_status
 
         msg = f"Status changed from **{old_status}** to **{new_status}**."
         if dev_note:
             msg += f"\n\n{dev_note}"
+        if new_status == "done" and done_version:
+            msg += f"\n\nIncluded in version **{done_version}**."
 
         comment = Comment(
             post_id=post.id,
@@ -247,6 +256,8 @@ async def update_item(
 
     if dev_note:
         post.dev_note = dev_note
+    if done_version:
+        post.done_version = done_version
 
     post.updated_at = datetime.datetime.utcnow()
     await db.commit()
@@ -265,10 +276,10 @@ async def bulk_update_items(
     new_status = body.get("status")
     dev_note = body.get("dev_note", "")
 
+    done_version = body.get("done_version", "")
+
     if not numbers or not new_status:
         raise HTTPException(status_code=400, detail="numbers and status required")
-    if new_status not in VALID_STATUSES:
-        raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}")
 
     updated = 0
     for num in numbers:
@@ -280,15 +291,23 @@ async def bulk_update_items(
             )
         )
         if post and post.status is not None:  # only lifecycle posts
+            valid = _valid_statuses_for(post.post_type)
+            if new_status not in valid:
+                continue  # skip posts where status doesn't apply
+
             old_status = post.status
             post.status = new_status
             post.updated_at = datetime.datetime.utcnow()
             if dev_note:
                 post.dev_note = dev_note
+            if done_version and new_status == "done":
+                post.done_version = done_version
 
             msg = f"Status changed from **{old_status}** to **{new_status}**."
             if dev_note:
                 msg += f"\n\n{dev_note}"
+            if new_status == "done" and done_version:
+                msg += f"\n\nIncluded in version **{done_version}**."
             comment = Comment(
                 post_id=post.id,
                 body_markdown=msg,
@@ -434,7 +453,7 @@ async def create_todo(
         fields_json=json.dumps(fields_data) if fields_data else None,
         author_email="developer",
         author_role="admin",
-        status="open" if forum.forum_type == "lifecycle" else None,
+        status=POST_TYPE_INITIAL_STATUS.get(post_type) if forum.forum_type == "lifecycle" else None,
     )
     db.add(post)
     await db.commit()

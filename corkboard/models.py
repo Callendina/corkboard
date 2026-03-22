@@ -36,6 +36,7 @@ class Post(Base):
     # Set when a post is moved from another forum
     moved_from_forum: Mapped[str | None] = mapped_column(String(100), nullable=True)
     dev_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    done_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
     vote_count: Mapped[int] = mapped_column(Integer, default=0)
     scrubbed: Mapped[bool] = mapped_column(Boolean, default=False)
     deleted_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)

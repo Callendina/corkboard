@@ -17,9 +17,16 @@
     <a href="{{ prefix }}/f/{{ forum.slug }}?post_type={{ pt }}" class="tab {{ 'active' if filter_post_type == pt }}">{{ pt | capitalize }}</a>
     {% endfor %}
     <span style="margin-left:auto;"></span>
+    {% if "todo" in forum.post_types and forum.post_types | length == 1 %}
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=under_review" class="tab {{ 'active' if filter_status == 'under_review' }}">Under Review</a>
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=under_development" class="tab {{ 'active' if filter_status == 'under_development' }}">In Dev</a>
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=testing" class="tab {{ 'active' if filter_status == 'testing' }}">Testing</a>
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=done" class="tab {{ 'active' if filter_status == 'done' }}">Done</a>
+    {% else %}
     <a href="{{ prefix }}/f/{{ forum.slug }}?status=open" class="tab {{ 'active' if filter_status == 'open' }}">Open</a>
     <a href="{{ prefix }}/f/{{ forum.slug }}?status=in_progress" class="tab {{ 'active' if filter_status == 'in_progress' }}">In Progress</a>
     <a href="{{ prefix }}/f/{{ forum.slug }}?status=done" class="tab {{ 'active' if filter_status == 'done' }}">Done</a>
+    {% endif %}
 </div>
 {% endif %}
 

@@ -62,6 +62,10 @@ a:hover { text-decoration: underline; }
 .status-done { background: var(--cb-success); color: #fff; }
 .status-wont_fix { background: var(--cb-muted); color: #fff; }
 .status-duplicate { background: var(--cb-muted); color: #fff; }
+.status-under_review { background: #7c3aed; color: #fff; }
+.status-under_development { background: #d97706; color: #fff; }
+.status-testing { background: #0891b2; color: #fff; }
+.status-wont_do { background: var(--cb-muted); color: #fff; }
 
 /* Post detail */
 .post-detail { margin-bottom: 32px; }

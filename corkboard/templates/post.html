@@ -51,6 +51,12 @@
     </div>
     {% endif %}
 
+    {% if post.done_version %}
+    <div class="dev-note">
+        <strong>Included in version:</strong> {{ post.done_version }}
+    </div>
+    {% endif %}
+
     <div class="post-actions">
         {% if user.email %}
         <form method="POST" action="{{ prefix }}/post/{{ post.post_number }}/vote" style="display:inline">

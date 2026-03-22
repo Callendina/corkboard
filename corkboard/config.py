@@ -19,7 +19,7 @@ POST_TYPE_FIELDS = {
         "priority": {"label": "Priority", "type": "select", "options": ["nice_to_have", "important", "essential"], "required": True},
     },
     "todo": {
-        "priority": {"label": "Priority", "type": "select", "options": ["low", "medium", "high", "critical"], "required": True},
+        "priority": {"label": "Priority", "type": "select", "options": ["high", "medium", "low", "long_term_goal", "probably_never"], "required": True},
         "assigned_to": {"label": "Assigned To", "type": "text", "required": False},
         "due_date": {"label": "Due Date", "type": "date", "required": False},
     },
@@ -27,6 +27,22 @@ POST_TYPE_FIELDS = {
 }
 
 VALID_POST_TYPES = set(POST_TYPE_FIELDS.keys())
+
+# Per-post-type lifecycle statuses
+POST_TYPE_STATUSES = {
+    "bug": {"open", "acknowledged", "in_progress", "done", "wont_fix", "duplicate"},
+    "feature": {"open", "acknowledged", "in_progress", "done", "wont_fix", "duplicate"},
+    "todo": {"under_review", "under_development", "testing", "done", "wont_do"},
+    "general": set(),
+}
+
+# Initial status when a lifecycle post is created
+POST_TYPE_INITIAL_STATUS = {
+    "bug": "open",
+    "feature": "open",
+    "todo": "under_review",
+    "general": None,
+}
 
 
 @dataclass
