@@ -1,10 +1,12 @@
 """Developer API — lifecycle management, export, tagging, move posts.
 
-Authenticated via X-Corkboard-Dev-Key header (per-app secret).
-Not exposed to end users.
+Authenticated via X-API-Key header (validated through gatekeeper) or
+X-Gatekeeper-* headers (when request comes through Caddy forward_auth).
+Requires admin role.
 """
 import datetime
 import json
+import httpx
 from corkboard.rendering import render_markdown
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -27,15 +29,37 @@ def init_dev_api_routes(config: CorkboardConfig):
     _config = config
 
 
-def _auth_dev(request: Request) -> AppConfig:
+async def _auth_dev(request: Request) -> AppConfig:
     host = request.headers.get("host", "")
     app = _config.app_for_domain(host)
     if app is None:
         raise HTTPException(status_code=404, detail="Unknown app")
 
-    key = request.headers.get("x-corkboard-dev-key", "")
-    if not key or not app.dev_api_key or key != app.dev_api_key:
-        raise HTTPException(status_code=401, detail="Invalid or missing dev API key")
+    # Check if already authenticated via Caddy forward_auth (admin)
+    gk_role = request.headers.get("x-gatekeeper-role", "")
+    gk_admin = request.headers.get("x-gatekeeper-system-admin", "") == "true"
+    if gk_role == "admin" or gk_admin:
+        return app
+
+    # Otherwise, validate X-API-Key through gatekeeper
+    api_key = request.headers.get("x-api-key", "")
+    if not api_key:
+        raise HTTPException(status_code=401, detail="Missing X-API-Key header")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "http://localhost:9100/_auth/verify",
+                headers={"x-api-key": api_key, "host": host},
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        role = resp.headers.get("x-gatekeeper-role", "")
+        is_admin = resp.headers.get("x-gatekeeper-system-admin", "") == "true"
+        if role != "admin" and not is_admin:
+            raise HTTPException(status_code=403, detail="Admin access required")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="Could not verify API key")
 
     return app
 
@@ -106,7 +130,7 @@ async def list_items(
     per_page: int = 50,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
 
     # Get lifecycle forum slugs
     lifecycle_slugs = [f.slug for f in app.forums if f.forum_type == "lifecycle"]
@@ -155,7 +179,7 @@ async def export_items(
     format: str = "markdown",
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
 
     lifecycle_slugs = [f.slug for f in app.forums if f.forum_type == "lifecycle"]
     stmt = (
@@ -209,7 +233,7 @@ async def get_item(
     number: int,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     post = await _get_post(db, app, number)
     return JSONResponse({"item": _post_to_dict(post, include_comments=True)})
 
@@ -220,7 +244,7 @@ async def update_item(
     number: int,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     post = await _get_post(db, app, number, lifecycle_only=True)
     body = await request.json()
 
@@ -270,7 +294,7 @@ async def bulk_update_items(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     body = await request.json()
     numbers = body.get("numbers", [])
     new_status = body.get("status")
@@ -330,7 +354,7 @@ async def move_item(
     db: AsyncSession = Depends(get_db),
 ):
     """Move a post to a different forum, optionally changing its post_type."""
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     post = await _get_post(db, app, number)
     body = await request.json()
 
@@ -386,7 +410,7 @@ async def dev_comment(
     number: int,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     post = await _get_post(db, app, number)
     body = await request.json()
     text = body.get("body", "")
@@ -417,7 +441,7 @@ async def create_todo(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a post via the dev API (typically a todo item)."""
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     body = await request.json()
 
     forum_slug = body.get("forum", "")
@@ -466,7 +490,7 @@ async def list_tags(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
 
     stmt = (
         select(ItemTag.tag, func.count(ItemTag.id))
@@ -487,7 +511,7 @@ async def set_tags(
     number: int,
     db: AsyncSession = Depends(get_db),
 ):
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     post = await _get_post(db, app, number)
     body = await request.json()
     new_tags = body.get("tags", [])
@@ -506,7 +530,7 @@ async def set_tags(
 @router.get("/forums")
 async def list_forums(request: Request):
     """List all forums for this app."""
-    app = _auth_dev(request)
+    app = await _auth_dev(request)
     return JSONResponse({"forums": [
         {
             "slug": f.slug,
