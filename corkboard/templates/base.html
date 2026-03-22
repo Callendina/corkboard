@@ -1,3 +1,42 @@
+{% if headless %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ prefix }}/static/style.css">
+{% if theme_css %}<style>{{ theme_css | safe }}</style>{% endif %}
+<style>body { background: transparent; }</style>
+<script>
+// In headless mode, ensure all internal navigation preserves layout=headless
+document.addEventListener('click', function(e) {
+  var a = e.target.closest('a');
+  if (!a || !a.href) return;
+  var url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+  if (url.searchParams.has('layout')) return;
+  url.searchParams.set('layout', 'headless');
+  a.href = url.toString();
+});
+document.addEventListener('submit', function(e) {
+  var form = e.target;
+  if (!form.action) return;
+  var url = new URL(form.action, location.href);
+  if (url.origin !== location.origin) return;
+  if (url.searchParams.has('layout')) return;
+  url.searchParams.set('layout', 'headless');
+  form.action = url.toString();
+});
+</script>
+{% block head %}{% endblock %}
+</head>
+<body>
+<main class="container" style="margin:0;max-width:none;padding:16px 20px">
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>
+{% else %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,7 +47,6 @@
 {% if theme and theme.favicon_url %}<link rel="icon" href="{{ theme.favicon_url }}">{% endif %}
 {% if theme_css %}<style>{{ theme_css | safe }}</style>{% endif %}
 {% if theme and theme.head_js %}<script>{{ theme.head_js | safe }}</script>{% endif %}
-{% block head %}{% endblock %}
 </head>
 <body>
 {% if header_html %}
@@ -38,3 +76,4 @@
 </main>
 </body>
 </html>
+{% endif %}

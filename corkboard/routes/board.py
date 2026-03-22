@@ -29,6 +29,14 @@ def init_board_routes(config: CorkboardConfig):
     templates.env.globals["POST_TYPE_FIELDS"] = POST_TYPE_FIELDS
 
 
+def _redirect(request: Request, url: str) -> RedirectResponse:
+    """Redirect preserving layout=headless if present."""
+    if request.query_params.get("layout") == "headless":
+        sep = "&" if "?" in url else "?"
+        url += f"{sep}layout=headless"
+    return RedirectResponse(url=url, status_code=302)
+
+
 def _get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -74,10 +82,11 @@ def _base_context(request: Request, app: AppConfig, user: RequestUser, **extra):
     meta = theme_meta(app.theme_file)
     visible_forums = app.forums_visible_to(user.role)
     prefix = _config.mount_prefix
+    headless = request.query_params.get("layout") == "headless"
 
-    # Build custom header if configured
+    # Build custom header if configured (skip in headless mode)
     header_html = ""
-    if meta.get("header_html_file"):
+    if not headless and meta.get("header_html_file"):
         forum_nav = " ".join(
             f'<a href="{prefix}/f/{f.slug}">{f.name}</a>'
             for f in visible_forums
@@ -100,6 +109,7 @@ def _base_context(request: Request, app: AppConfig, user: RequestUser, **extra):
         "theme_css": theme_css_override(app.theme_file),
         "theme": meta,
         "header_html": header_html,
+        "headless": headless,
     }
     ctx.update(extra)
     return ctx
@@ -117,9 +127,7 @@ async def forum_index(
     app = _get_app(request)
     forums = app.forums_visible_to(user.role)
     if len(forums) == 1:
-        return RedirectResponse(
-            url=f"{_config.mount_prefix}/f/{forums[0].slug}", status_code=302
-        )
+        return _redirect(request, f"{_config.mount_prefix}/f/{forums[0].slug}")
     return templates.TemplateResponse("forum_index.html", _base_context(
         request, app, user, forums=forums,
     ))
@@ -266,10 +274,7 @@ async def create_post(
     db.add(post)
     await db.commit()
 
-    return RedirectResponse(
-        url=f"{_config.mount_prefix}/post/{post_number}",
-        status_code=302,
-    )
+    return _redirect(request, f"{_config.mount_prefix}/post/{post_number}")
 
 
 @router.get("/post/{number}")
@@ -354,10 +359,7 @@ async def add_comment(
     db.add(comment)
     await db.commit()
 
-    return RedirectResponse(
-        url=f"{_config.mount_prefix}/post/{number}",
-        status_code=302,
-    )
+    return _redirect(request, f"{_config.mount_prefix}/post/{number}")
 
 
 @router.post("/post/{number}/vote")
@@ -389,10 +391,7 @@ async def toggle_vote(
 
     await db.commit()
 
-    return RedirectResponse(
-        url=f"{_config.mount_prefix}/post/{number}",
-        status_code=302,
-    )
+    return _redirect(request, f"{_config.mount_prefix}/post/{number}")
 
 
 @router.post("/post/{number}/delete")
@@ -415,6 +414,4 @@ async def delete_post(
     post.deleted_at = datetime.datetime.utcnow()
     await db.commit()
 
-    return RedirectResponse(
-        url=f"{_config.mount_prefix}/f/{post.forum_slug}", status_code=302
-    )
+    return _redirect(request, f"{_config.mount_prefix}/f/{post.forum_slug}")
