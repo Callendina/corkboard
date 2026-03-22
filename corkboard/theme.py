@@ -57,15 +57,18 @@ def theme_css_override(theme_file: str) -> str:
     if not css_vars:
         return ""
 
-    parts = [_css_block(":root", css_vars)]
+    parts = []
+
+    # extra_css first — @import rules must precede all other CSS rules
+    extra_css = data.get("extra_css", "")
+    if extra_css:
+        parts.append(extra_css)
+
+    parts.append(_css_block(":root", css_vars))
 
     dark_vars = data.get("css_variables_dark", {})
     if dark_vars:
         parts.append(_css_block('[data-theme="dark"]', dark_vars))
-
-    extra_css = data.get("extra_css", "")
-    if extra_css:
-        parts.append(extra_css)
 
     return "\n".join(parts)
 
