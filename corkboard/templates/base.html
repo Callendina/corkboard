@@ -11,6 +11,7 @@
 {% if theme_css %}<style>{{ theme_css | safe }}</style>{% endif %}
 {% if headless %}
 <style>body { background: transparent; }</style>
+{% if theme and theme.head_js %}<script>{{ theme.head_js | safe }}</script>{% endif %}
 <script>
 // In headless mode, ensure all internal navigation preserves layout=headless
 document.addEventListener('click', function(e) {
