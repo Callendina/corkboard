@@ -6,7 +6,8 @@
 <title>{% block title %}Corkboard{% endblock %} — {{ app.app_name }}</title>
 <link rel="stylesheet" href="{{ prefix }}/static/style.css">
 {% if theme and theme.favicon_url %}<link rel="icon" href="{{ theme.favicon_url }}">{% endif %}
-{% if theme_css %}<style>{{ theme_css }}</style>{% endif %}
+{% if theme_css %}<style>{{ theme_css | safe }}</style>{% endif %}
+{% if theme and theme.head_js %}<script>{{ theme.head_js | safe }}</script>{% endif %}
 {% block head %}{% endblock %}
 </head>
 <body>

@@ -39,21 +39,35 @@ def load_theme(theme_file: str) -> dict:
         return {"css_variables": DEFAULT_THEME}
 
 
-def theme_css_override(theme_file: str) -> str:
-    """Return a CSS :root block with variable overrides from the theme file."""
-    data = load_theme(theme_file)
-    css_vars = data.get("css_variables", {})
-    if not css_vars:
-        return ""
-
-    lines = [":root {"]
-    for key, value in css_vars.items():
-        # Ensure keys start with --
+def _css_block(selector: str, variables: dict) -> str:
+    """Build a CSS block with variable declarations."""
+    lines = [f"{selector} {{"]
+    for key, value in variables.items():
         if not key.startswith("--"):
             key = f"--{key}"
         lines.append(f"  {key}: {value};")
     lines.append("}")
     return "\n".join(lines)
+
+
+def theme_css_override(theme_file: str) -> str:
+    """Return CSS with :root variables, optional dark mode overrides, and extra_css."""
+    data = load_theme(theme_file)
+    css_vars = data.get("css_variables", {})
+    if not css_vars:
+        return ""
+
+    parts = [_css_block(":root", css_vars)]
+
+    dark_vars = data.get("css_variables_dark", {})
+    if dark_vars:
+        parts.append(_css_block('[data-theme="dark"]', dark_vars))
+
+    extra_css = data.get("extra_css", "")
+    if extra_css:
+        parts.append(extra_css)
+
+    return "\n".join(parts)
 
 
 def theme_meta(theme_file: str) -> dict:
@@ -65,6 +79,7 @@ def theme_meta(theme_file: str) -> dict:
         "app_name": data.get("app_name", ""),
         "back_url": data.get("back_url", "/"),
         "back_label": data.get("back_label", "Back"),
+        "head_js": data.get("head_js", ""),
     }
 
 
