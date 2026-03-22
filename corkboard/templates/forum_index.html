@@ -1,16 +1,45 @@
 {% extends "base.html" %}
 {% block title %}Forums{% endblock %}
 {% block content %}
-<div class="breadcrumb" >
+<div class="breadcrumb">
     <span style="color:var(--cb-muted)">All Forums</span>
 </div>
-<div class="forum-list">
-    {% for forum in forums %}
-    <a href="{{ prefix }}/f/{{ forum.slug }}" class="forum-card">
-        <h2>{{ forum.name }}</h2>
-    </a>
-    {% endfor %}
+
+{% for forum in forums %}
+<div class="forum-section" style="margin-bottom:32px">
+    <h2 style="margin-bottom:4px"><a href="{{ prefix }}/f/{{ forum.slug }}">{{ forum.name }}</a></h2>
+    {% if forum.description %}
+    <p style="color:var(--cb-muted);margin-bottom:12px;font-size:14px">{{ forum.description }}</p>
+    {% endif %}
+    {% set posts = forum_posts.get(forum.slug, []) %}
+    {% if posts %}
+    <table class="post-list">
+        <thead>
+            <tr>
+                <th>#</th>
+                {% if forum.forum_type == "lifecycle" %}<th>Status</th>{% endif %}
+                <th>Title</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td>{{ post.post_number }}</td>
+                {% if forum.forum_type == "lifecycle" %}
+                <td><span class="status-badge status-{{ post.status }}">{{ post.status }}</span></td>
+                {% endif %}
+                <td><a href="{{ prefix }}/post/{{ post.post_number }}">{{ post.title }}</a></td>
+                <td>{{ post.created_at.strftime('%Y-%m-%d') if post.created_at else '' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--cb-muted);font-size:14px">No posts yet.</p>
+    {% endif %}
 </div>
+{% endfor %}
 
 {% if not forums %}
 <p class="empty">No forums configured for this app.</p>

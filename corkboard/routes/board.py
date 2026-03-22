@@ -121,6 +121,7 @@ def _base_context(request: Request, app: AppConfig, user: RequestUser, **extra):
 @router.get("/")
 async def forum_index(
     request: Request,
+    db: AsyncSession = Depends(get_db),
     user: RequestUser = Depends(get_current_user),
 ):
     """List all forums the user can see."""
@@ -128,8 +129,25 @@ async def forum_index(
     forums = app.forums_visible_to(user.role)
     if len(forums) == 1:
         return _redirect(request, f"{_config.mount_prefix}/f/{forums[0].slug}")
+
+    # Fetch 5 most recent posts per forum
+    forum_posts = {}
+    for forum in forums:
+        stmt = (
+            select(Post)
+            .where(
+                Post.app_slug == app.slug,
+                Post.forum_slug == forum.slug,
+                Post.deleted_at.is_(None),
+            )
+            .order_by(Post.created_at.desc())
+            .limit(5)
+        )
+        result = await db.execute(stmt)
+        forum_posts[forum.slug] = result.scalars().all()
+
     return templates.TemplateResponse("forum_index.html", _base_context(
-        request, app, user, forums=forums,
+        request, app, user, forums=forums, forum_posts=forum_posts,
     ))
 
 

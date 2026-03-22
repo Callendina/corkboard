@@ -49,6 +49,7 @@ POST_TYPE_INITIAL_STATUS = {
 class ForumConfig:
     slug: str = ""
     name: str = ""
+    description: str = ""
     forum_type: str = "general"  # "general" | "lifecycle"
     post_types: list[str] = field(default_factory=lambda: ["general"])
     read_roles: list[str] = field(default_factory=lambda: ["anon", "user", "admin"])
@@ -111,6 +112,7 @@ def _parse_forum(raw: dict, index: int) -> ForumConfig:
     return ForumConfig(
         slug=raw.get("slug", f"forum-{index}"),
         name=raw.get("name", raw.get("slug", f"Forum {index}")),
+        description=raw.get("description", ""),
         forum_type=raw.get("type", "general"),
         post_types=raw.get("post_types", ["general"]),
         read_roles=raw.get("read_roles", ["anon", "user", "admin"]),
