@@ -18,10 +18,6 @@
 {% if forum.forum_type == "lifecycle" %}
 <div class="board-filters">
     <a href="{{ prefix }}/f/{{ forum.slug }}" class="tab {{ 'active' if not filter_status and not filter_post_type }}">All</a>
-    {% for pt in forum.post_types %}
-    <a href="{{ prefix }}/f/{{ forum.slug }}?post_type={{ pt }}" class="tab {{ 'active' if filter_post_type == pt }}">{{ pt | capitalize }}</a>
-    {% endfor %}
-    <span style="margin-left:auto;"></span>
     {% if "todo" in forum.post_types and forum.post_types | length == 1 %}
     <a href="{{ prefix }}/f/{{ forum.slug }}?status=under_review" class="tab {{ 'active' if filter_status == 'under_review' }}">Under Review</a>
     <a href="{{ prefix }}/f/{{ forum.slug }}?status=under_development" class="tab {{ 'active' if filter_status == 'under_development' }}">In Dev</a>
@@ -40,7 +36,7 @@
     <thead>
         <tr>
             <th>#</th>
-            {% if forum.forum_type == "lifecycle" %}<th>Type</th><th>Status</th>{% endif %}
+            {% if forum.forum_type == "lifecycle" %}<th>Status</th>{% endif %}
             <th>Title</th>
             <th>Votes</th>
             <th>Author</th>
@@ -52,7 +48,6 @@
         <tr>
             <td>{{ post.post_number }}</td>
             {% if forum.forum_type == "lifecycle" %}
-                <td><span class="type-badge type-{{ post.post_type }}">{{ post.post_type }}</span></td>
                 <td><span class="status-badge status-{{ post.status }}">{{ post.status }}</span></td>
             {% endif %}
             <td><a href="{{ prefix }}/post/{{ post.post_number }}">{{ post.title }}</a></td>
