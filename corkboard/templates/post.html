@@ -14,6 +14,7 @@
             {% endif %}
             <span>by {{ mask_author(post.author_email, user.role, post.post_number) }}</span>
             <span>{{ post.created_at.strftime('%Y-%m-%d %H:%M') if post.created_at else '' }}</span>
+            <button onclick="var u=location.origin+'{{ prefix }}/post/{{ post.post_number }}';navigator.clipboard.writeText(u).then(function(){this.textContent='Copied!'}.bind(this),function(){prompt('Permalink:',u)})" class="btn-small" style="background:var(--cb-surface);color:var(--cb-accent);border:1px solid var(--cb-border);cursor:pointer" title="Copy permalink">&#128279; Permalink</button>
             {% if post.scrubbed %}
             <span class="scrubbed-notice" title="Some sensitive content was automatically removed">Scrubbed</span>
             {% endif %}
