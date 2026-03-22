@@ -6,10 +6,38 @@ from pathlib import Path
 import yaml
 
 
+# Hardcoded post type definitions — fields beyond title/body
+POST_TYPE_FIELDS = {
+    "bug": {
+        "steps_to_reproduce": {"label": "Steps to Reproduce", "type": "textarea", "required": True},
+        "expected_behaviour": {"label": "Expected Behaviour", "type": "textarea", "required": True},
+        "actual_behaviour": {"label": "Actual Behaviour", "type": "textarea", "required": True},
+        "severity": {"label": "Severity", "type": "select", "options": ["low", "medium", "high", "critical"], "required": True},
+    },
+    "feature": {
+        "use_case": {"label": "Use Case", "type": "textarea", "required": True},
+        "priority": {"label": "Priority", "type": "select", "options": ["nice_to_have", "important", "essential"], "required": True},
+    },
+    "todo": {
+        "priority": {"label": "Priority", "type": "select", "options": ["low", "medium", "high", "critical"], "required": True},
+        "assigned_to": {"label": "Assigned To", "type": "text", "required": False},
+        "due_date": {"label": "Due Date", "type": "date", "required": False},
+    },
+    "general": {},
+}
+
+VALID_POST_TYPES = set(POST_TYPE_FIELDS.keys())
+
+
 @dataclass
-class CategoriesConfig:
-    general: list[str] = field(default_factory=lambda: ["General"])
-    structured: list[str] = field(default_factory=lambda: ["Bug Report", "Feature Request"])
+class ForumConfig:
+    slug: str = ""
+    name: str = ""
+    forum_type: str = "general"  # "general" | "lifecycle"
+    post_types: list[str] = field(default_factory=lambda: ["general"])
+    read_roles: list[str] = field(default_factory=lambda: ["anon", "user", "admin"])
+    post_roles: list[str] = field(default_factory=lambda: ["user", "admin"])
+    sort_order: int = 0
 
 
 @dataclass
@@ -31,10 +59,18 @@ class AppConfig:
     app_name: str = ""
     dev_api_key: str = ""
     theme_file: str = ""
-    categories: CategoriesConfig = field(default_factory=CategoriesConfig)
+    forums: list[ForumConfig] = field(default_factory=list)
     webhooks: list[WebhookConfig] = field(default_factory=list)
     rate_limits: RateLimitsConfig = field(default_factory=RateLimitsConfig)
-    anonymous_access: str = "read_only"  # "read_only" | "none" | "post_allowed"
+
+    def get_forum(self, forum_slug: str) -> ForumConfig | None:
+        for f in self.forums:
+            if f.slug == forum_slug:
+                return f
+        return None
+
+    def forums_visible_to(self, role: str) -> list[ForumConfig]:
+        return [f for f in self.forums if role in f.read_roles]
 
 
 @dataclass
@@ -54,12 +90,15 @@ class CorkboardConfig:
         return None
 
 
-def _parse_categories(raw: dict | None) -> CategoriesConfig:
-    if not raw:
-        return CategoriesConfig()
-    return CategoriesConfig(
-        general=raw.get("general", ["General"]),
-        structured=raw.get("structured", ["Bug Report", "Feature Request"]),
+def _parse_forum(raw: dict, index: int) -> ForumConfig:
+    return ForumConfig(
+        slug=raw.get("slug", f"forum-{index}"),
+        name=raw.get("name", raw.get("slug", f"Forum {index}")),
+        forum_type=raw.get("type", "general"),
+        post_types=raw.get("post_types", ["general"]),
+        read_roles=raw.get("read_roles", ["anon", "user", "admin"]),
+        post_roles=raw.get("post_roles", ["user", "admin"]),
+        sort_order=raw.get("sort_order", index),
     )
 
 
@@ -74,19 +113,22 @@ def _parse_app_config(slug: str, raw: dict) -> AppConfig:
 
     rl = raw.get("rate_limits", {}) or {}
 
+    forums = []
+    for i, f_raw in enumerate(raw.get("forums", []) or []):
+        forums.append(_parse_forum(f_raw, i))
+
     return AppConfig(
         slug=slug,
         domains=raw.get("domains", []),
         app_name=raw.get("app_name", raw.get("name", slug)),
         dev_api_key=raw.get("dev_api_key", ""),
         theme_file=raw.get("theme_file", ""),
-        categories=_parse_categories(raw.get("categories")),
+        forums=forums,
         webhooks=webhooks,
         rate_limits=RateLimitsConfig(
             posts_per_hour=rl.get("posts_per_hour", 5),
             comments_per_hour=rl.get("comments_per_hour", 20),
         ),
-        anonymous_access=raw.get("anonymous_access", "read_only"),
     )
 
 

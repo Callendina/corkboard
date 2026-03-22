@@ -1,42 +1,55 @@
 {% extends "base.html" %}
-{% block title %}{{ "Bugs & Features" if board == "structured" else "Discussion" }}{% endblock %}
+{% block title %}{{ forum.name }}{% endblock %}
 {% block content %}
-<div class="board-tabs">
-  <a href="{{ prefix }}/?board=structured" class="tab {{ 'active' if board == 'structured' }}">Bugs & Features</a>
-  <a href="{{ prefix }}/?board=general" class="tab {{ 'active' if board == 'general' }}">Discussion</a>
-  {% if user.role != "anon" %}
-    <a href="{{ prefix }}/new?board={{ board }}" class="btn btn-primary" style="margin-left:auto">New Post</a>
-  {% endif %}
+<div class="board-header">
+    <h1>{{ forum.name }}</h1>
+    <div class="board-actions">
+        {% if user.role in forum.post_roles %}
+            <a href="{{ prefix }}/f/{{ forum.slug }}/new" class="btn btn-primary">New Post</a>
+        {% endif %}
+    </div>
 </div>
+
+{% if forum.forum_type == "lifecycle" %}
+<div class="board-filters">
+    <a href="{{ prefix }}/f/{{ forum.slug }}" class="tab {{ 'active' if not filter_status and not filter_post_type }}">All</a>
+    {% for pt in forum.post_types %}
+    <a href="{{ prefix }}/f/{{ forum.slug }}?post_type={{ pt }}" class="tab {{ 'active' if filter_post_type == pt }}">{{ pt | capitalize }}</a>
+    {% endfor %}
+    <span style="margin-left:auto;"></span>
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=open" class="tab {{ 'active' if filter_status == 'open' }}">Open</a>
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=in_progress" class="tab {{ 'active' if filter_status == 'in_progress' }}">In Progress</a>
+    <a href="{{ prefix }}/f/{{ forum.slug }}?status=done" class="tab {{ 'active' if filter_status == 'done' }}">Done</a>
+</div>
+{% endif %}
 
 {% if posts %}
 <table class="post-list">
-  <thead>
-    <tr>
-      <th>#</th>
-      {% if board == "structured" %}<th>Status</th>{% endif %}
-      <th>Title</th>
-      <th>Category</th>
-      <th>Votes</th>
-      <th>Author</th>
-      <th>Date</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for post in posts %}
-    <tr>
-      <td>{{ post.post_number }}</td>
-      {% if board == "structured" %}
-        <td><span class="status-badge status-{{ post.status }}">{{ post.status }}</span></td>
-      {% endif %}
-      <td><a href="{{ prefix }}/post/{{ post.post_number }}">{{ post.title }}</a></td>
-      <td>{{ post.category }}</td>
-      <td>{{ post.vote_count }}</td>
-      <td>{{ mask_author(post.author_email, user.role, post.post_number) }}</td>
-      <td>{{ post.created_at.strftime('%Y-%m-%d') if post.created_at else '' }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
+    <thead>
+        <tr>
+            <th>#</th>
+            {% if forum.forum_type == "lifecycle" %}<th>Type</th><th>Status</th>{% endif %}
+            <th>Title</th>
+            <th>Votes</th>
+            <th>Author</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for post in posts %}
+        <tr>
+            <td>{{ post.post_number }}</td>
+            {% if forum.forum_type == "lifecycle" %}
+                <td><span class="type-badge type-{{ post.post_type }}">{{ post.post_type }}</span></td>
+                <td><span class="status-badge status-{{ post.status }}">{{ post.status }}</span></td>
+            {% endif %}
+            <td><a href="{{ prefix }}/post/{{ post.post_number }}">{{ post.title }}</a></td>
+            <td>{{ post.vote_count }}</td>
+            <td>{{ mask_author(post.author_email, user.role, post.post_number) }}</td>
+            <td>{{ post.created_at.strftime('%Y-%m-%d') if post.created_at else '' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
 </table>
 {% else %}
 <p class="empty">No posts yet.</p>
@@ -44,9 +57,9 @@
 
 {% if total > per_page %}
 <div class="pagination">
-  {% if page > 1 %}<a href="{{ prefix }}/?board={{ board }}&page={{ page - 1 }}">Previous</a>{% endif %}
-  <span>Page {{ page }} of {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
-  {% if page * per_page < total %}<a href="{{ prefix }}/?board={{ board }}&page={{ page + 1 }}">Next</a>{% endif %}
+    {% if page > 1 %}<a href="{{ prefix }}/f/{{ forum.slug }}?page={{ page - 1 }}">Previous</a>{% endif %}
+    <span>Page {{ page }} of {{ (total // per_page) + (1 if total % per_page else 0) }}</span>
+    {% if page * per_page < total %}<a href="{{ prefix }}/f/{{ forum.slug }}?page={{ page + 1 }}">Next</a>{% endif %}
 </div>
 {% endif %}
 {% endblock %}

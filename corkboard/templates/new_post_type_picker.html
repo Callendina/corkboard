@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}New Post — {{ forum.name }}{% endblock %}
+{% block content %}
+<h1>New Post in {{ forum.name }}</h1>
+<p style="margin-bottom:1.5rem; color:var(--cb-muted);">What kind of post?</p>
+
+<div class="type-picker">
+    {% for pt in forum.post_types %}
+    <a href="{{ prefix }}/f/{{ forum.slug }}/new?post_type={{ pt }}" class="type-option">
+        <span class="type-badge type-{{ pt }}">{{ pt | capitalize }}</span>
+        {% if pt == "bug" %}Report a bug or issue{% endif %}
+        {% if pt == "feature" %}Request a new feature{% endif %}
+        {% if pt == "todo" %}Add a development task{% endif %}
+        {% if pt == "general" %}Start a discussion{% endif %}
+    </a>
+    {% endfor %}
+</div>
+
+<p style="margin-top:1.5rem;"><a href="{{ prefix }}/f/{{ forum.slug }}">Cancel</a></p>
+{% endblock %}

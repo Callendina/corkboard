@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Forums{% endblock %}
+{% block content %}
+<h1>{{ app.app_name }} — Forums</h1>
+
+<div class="forum-list">
+    {% for forum in forums %}
+    <a href="{{ prefix }}/f/{{ forum.slug }}" class="forum-card">
+        <h2>{{ forum.name }}</h2>
+        <div class="forum-meta">
+            {% if forum.forum_type == "lifecycle" %}
+                <span class="badge badge-lifecycle">{{ forum.post_types | join(", ") }}</span>
+            {% else %}
+                <span class="badge badge-general">Discussion</span>
+            {% endif %}
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% if not forums %}
+<p class="empty">No forums configured for this app.</p>
+{% endif %}
+{% endblock %}

@@ -56,23 +56,77 @@ Three effective roles in corkboard:
 
 Roles are inherited from the parent app via gatekeeper. A vispay admin is automatically a corkboard admin when viewing vispay's corkboard.
 
-## Board types
+## Forums
 
-### General (Q&A / Discussion)
-Free-form discussion threads. No lifecycle states. Categories are configurable per app.
+Each app defines one or more **forums** in its config. Forums come in two types:
 
-### Structured (Bug Reports / Feature Requests)
-Posts have a lifecycle status: `open` → `acknowledged` → `in_progress` → `done` / `wont_fix` / `duplicate`. Status changes are managed via the developer API and generate system comments visible to users.
+### General forums
+Free-form discussion threads. Posts have type `general` with title + body only.
+
+### Lifecycle forums
+Posts have a structured type (`bug`, `feature`, or `todo`) with type-specific fields and a lifecycle status: `open` → `acknowledged` → `in_progress` → `done` / `wont_fix` / `duplicate`.
+
+### Post types and their fields
+- **bug**: steps_to_reproduce, expected_behaviour, actual_behaviour, severity (low/medium/high/critical)
+- **feature**: use_case, priority (nice_to_have/important/essential)
+- **todo**: priority (low/medium/high/critical), assigned_to, due_date
+- **general**: title + body only
+
+Post type field definitions are hardcoded in `config.py:POST_TYPE_FIELDS`. Fields are stored as JSON in the `fields_json` column.
+
+### Per-forum access control
+Each forum has `read_roles` and `post_roles` lists. Roles are `anon`, `user`, `admin` — inherited from gatekeeper headers. A forum can be read-only for anon users but writable by signed-in users.
+
+### Moving posts between forums
+Posts can be moved via the dev API (`POST /api/dev/items/{number}/move`). The original forum is recorded in `moved_from_forum`. A system comment is added. If moved to a lifecycle forum, status is set to `open`.
+
+### Forum config example
+```yaml
+forums:
+  - slug: "bugs"
+    name: "Bug Reports"
+    type: "lifecycle"
+    post_types: ["bug"]
+    read_roles: ["anon", "user", "admin"]
+    post_roles: ["user", "admin"]
+  - slug: "roadmap"
+    name: "Development Roadmap"
+    type: "lifecycle"
+    post_types: ["todo", "bug", "feature"]
+    read_roles: ["anon", "user", "admin"]
+    post_roles: ["admin"]
+  - slug: "general"
+    name: "Discussion"
+    type: "general"
+    post_types: ["general"]
+    read_roles: ["user", "admin"]
+    post_roles: ["user", "admin"]
+```
+
+## URL structure
+
+```
+/corkboard/                          → forum index (list of forums)
+/corkboard/f/{forum_slug}            → posts in a forum
+/corkboard/f/{forum_slug}/new        → new post (type picker if multiple types)
+/corkboard/post/{number}             → single post + comments
+/corkboard/admin/                    → admin moderation
+/corkboard/api/dev/...               → developer API
+```
 
 ## Developer API
 
 JSON API at `/corkboard/api/dev/...` for lifecycle management. Authenticated via `X-Corkboard-Dev-Key` header (per-app secret, set in config). Not exposed to end users.
 
 Key endpoints:
-- `GET /api/dev/items` — list/filter structured posts
-- `GET /api/dev/items/export` — markdown or JSON export (for feeding into todo tools)
+- `GET /api/dev/forums` — list all forums for the app
+- `GET /api/dev/items` — list/filter lifecycle posts (across all lifecycle forums or filtered by `?forum=`)
+- `GET /api/dev/items/export` — markdown or JSON export (grouped by post type)
+- `GET /api/dev/items/{number}` — single item with comments and structured fields
 - `PATCH /api/dev/items/{number}` — update status, add dev note
 - `PATCH /api/dev/items/bulk` — bulk status update
+- `POST /api/dev/items/create` — create a post via API (typically a todo item)
+- `POST /api/dev/items/{number}/move` — move post to a different forum
 - `POST /api/dev/items/{number}/comment` — add developer comment
 - `POST /api/dev/items/{number}/tags` — set tags
 

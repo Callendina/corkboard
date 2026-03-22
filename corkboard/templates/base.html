@@ -24,6 +24,11 @@
 <nav class="topbar">
   <div class="topbar-left">
     <a href="{{ prefix }}/" class="topbar-brand">{{ app.app_name }} — Corkboard</a>
+    {% if visible_forums is defined %}
+    {% for f in visible_forums %}
+    <a href="{{ prefix }}/f/{{ f.slug }}" class="topbar-forum-link">{{ f.name }}</a>
+    {% endfor %}
+    {% endif %}
   </div>
   <div class="topbar-right">
     {% if user.role != "anon" %}

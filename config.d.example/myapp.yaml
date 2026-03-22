@@ -7,17 +7,37 @@ domains:
 app_name: "My App"
 dev_api_key: "change-me"
 theme_file: "/path/to/corkboard-theme.json"
-categories:
-  general:
-    - "General"
-    - "How do I...?"
-  structured:
-    - "Bug Report"
-    - "Feature Request"
+
+forums:
+  - slug: "bugs"
+    name: "Bug Reports"
+    type: "lifecycle"
+    post_types: ["bug"]
+    read_roles: ["anon", "user", "admin"]
+    post_roles: ["user", "admin"]
+
+  - slug: "features"
+    name: "Feature Requests"
+    type: "lifecycle"
+    post_types: ["feature"]
+    read_roles: ["anon", "user", "admin"]
+    post_roles: ["user", "admin"]
+
+  - slug: "roadmap"
+    name: "Development Roadmap"
+    type: "lifecycle"
+    post_types: ["todo", "bug", "feature"]
+    read_roles: ["anon", "user", "admin"]
+    post_roles: ["admin"]
+
+  - slug: "general"
+    name: "Discussion"
+    type: "general"
+    post_types: ["general"]
+    read_roles: ["user", "admin"]
+    post_roles: ["user", "admin"]
+
 webhooks: []
-  # - url: "https://hooks.slack.com/..."
-  #   events: ["new_structured", "status_change"]
 rate_limits:
   posts_per_hour: 5
   comments_per_hour: 20
-anonymous_access: "read_only"  # "read_only" | "none" | "post_allowed"

@@ -1,9 +1,10 @@
-"""Developer API — lifecycle management, export, tagging.
+"""Developer API — lifecycle management, export, tagging, move posts.
 
 Authenticated via X-Corkboard-Dev-Key header (per-app secret).
 Not exposed to end users.
 """
 import datetime
+import json
 import markdown
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -11,7 +12,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from corkboard.database import get_db
-from corkboard.config import CorkboardConfig, AppConfig
+from corkboard.config import CorkboardConfig, AppConfig, POST_TYPE_FIELDS
 from corkboard.models import Post, Comment, ItemTag
 
 router = APIRouter(prefix="/api/dev")
@@ -26,7 +27,6 @@ def init_dev_api_routes(config: CorkboardConfig):
 
 
 def _auth_dev(request: Request) -> AppConfig:
-    """Authenticate via X-Corkboard-Dev-Key and return the app config."""
     host = request.headers.get("host", "")
     app = _config.app_for_domain(host)
     if app is None:
@@ -42,13 +42,16 @@ def _auth_dev(request: Request) -> AppConfig:
 def _post_to_dict(post: Post, include_comments: bool = False) -> dict:
     d = {
         "number": post.post_number,
+        "forum": post.forum_slug,
+        "post_type": post.post_type,
         "title": post.title,
-        "category": post.category,
         "status": post.status,
         "author_email": post.author_email,
         "vote_count": post.vote_count,
         "dev_note": post.dev_note,
+        "fields": post.fields,
         "tags": [t.tag for t in post.tags] if post.tags else [],
+        "moved_from_forum": post.moved_from_forum,
         "created_at": post.created_at.isoformat() + "Z" if post.created_at else None,
         "updated_at": post.updated_at.isoformat() + "Z" if post.updated_at else None,
     }
@@ -69,25 +72,33 @@ def _post_to_dict(post: Post, include_comments: bool = False) -> dict:
     return d
 
 
-async def _get_post(db: AsyncSession, app: AppConfig, number: int) -> Post:
+async def _get_post(db: AsyncSession, app: AppConfig, number: int,
+                    lifecycle_only: bool = False) -> Post:
     stmt = select(Post).where(
         Post.app_slug == app.slug,
         Post.post_number == number,
-        Post.board_type == "structured",
         Post.deleted_at.is_(None),
     )
     result = await db.execute(stmt)
     post = result.scalar_one_or_none()
     if post is None:
         raise HTTPException(status_code=404, detail="Item not found")
+    if lifecycle_only:
+        forum = app.get_forum(post.forum_slug)
+        if not forum or forum.forum_type != "lifecycle":
+            raise HTTPException(status_code=400, detail="Post is not in a lifecycle forum")
     return post
+
+
+# --- Items (lifecycle posts) ---
 
 
 @router.get("/items")
 async def list_items(
     request: Request,
+    forum: str = "",
     status: str | None = None,
-    category: str | None = None,
+    post_type: str | None = None,
     tag: str | None = None,
     page: int = 1,
     per_page: int = 50,
@@ -95,19 +106,27 @@ async def list_items(
 ):
     app = _auth_dev(request)
 
+    # Get lifecycle forum slugs
+    lifecycle_slugs = [f.slug for f in app.forums if f.forum_type == "lifecycle"]
+    if not lifecycle_slugs:
+        return JSONResponse({"items": [], "total": 0, "page": page, "per_page": per_page})
+
     stmt = select(Post).where(
         Post.app_slug == app.slug,
-        Post.board_type == "structured",
         Post.deleted_at.is_(None),
     )
+    if forum:
+        stmt = stmt.where(Post.forum_slug == forum)
+    else:
+        stmt = stmt.where(Post.forum_slug.in_(lifecycle_slugs))
+
     if status:
         stmt = stmt.where(Post.status == status)
-    if category:
-        stmt = stmt.where(Post.category == category)
+    if post_type:
+        stmt = stmt.where(Post.post_type == post_type)
 
     stmt = stmt.order_by(Post.created_at.desc())
 
-    # Count total before pagination
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = await db.scalar(count_stmt) or 0
 
@@ -115,7 +134,6 @@ async def list_items(
     result = await db.execute(stmt)
     posts = result.scalars().all()
 
-    # Filter by tag in Python (simpler than a join for small datasets)
     if tag:
         posts = [p for p in posts if any(t.tag == tag for t in (p.tags or []))]
 
@@ -130,22 +148,28 @@ async def list_items(
 @router.get("/items/export")
 async def export_items(
     request: Request,
+    forum: str = "",
     status: str = "open",
     format: str = "markdown",
     db: AsyncSession = Depends(get_db),
 ):
     app = _auth_dev(request)
 
+    lifecycle_slugs = [f.slug for f in app.forums if f.forum_type == "lifecycle"]
     stmt = (
         select(Post)
         .where(
             Post.app_slug == app.slug,
-            Post.board_type == "structured",
             Post.deleted_at.is_(None),
             Post.status == status,
         )
-        .order_by(Post.vote_count.desc(), Post.created_at.asc())
     )
+    if forum:
+        stmt = stmt.where(Post.forum_slug == forum)
+    else:
+        stmt = stmt.where(Post.forum_slug.in_(lifecycle_slugs))
+
+    stmt = stmt.order_by(Post.vote_count.desc(), Post.created_at.asc())
     result = await db.execute(stmt)
     posts = result.scalars().all()
 
@@ -154,20 +178,24 @@ async def export_items(
             "items": [_post_to_dict(p, include_comments=True) for p in posts],
         })
 
-    # Markdown export
-    bugs = [p for p in posts if p.category.lower() in ("bug", "bug report")]
-    features = [p for p in posts if p.category.lower() in ("feature", "feature request")]
-    other = [p for p in posts if p not in bugs and p not in features]
+    # Markdown export — group by post_type
+    groups = {}
+    for p in posts:
+        groups.setdefault(p.post_type, []).append(p)
 
+    type_labels = {"bug": "Bugs", "feature": "Feature requests", "todo": "Todo", "general": "Other"}
     lines = []
-    for label, items in [("Bugs", bugs), ("Feature requests", features), ("Other", other)]:
+    for pt in ["bug", "feature", "todo", "general"]:
+        items = groups.get(pt, [])
         if items:
+            label = type_labels.get(pt, pt)
             lines.append(f"## {label} ({len(items)})")
             for p in items:
                 tags = ", ".join(t.tag for t in (p.tags or []))
                 tag_str = f" [{tags}]" if tags else ""
                 votes = f" ({p.vote_count} votes)" if p.vote_count else ""
-                lines.append(f"- [ ] #{p.post_number}: {p.title}{votes}{tag_str}")
+                forum_label = f" @{p.forum_slug}" if forum == "" else ""
+                lines.append(f"- [ ] #{p.post_number}: {p.title}{votes}{tag_str}{forum_label}")
             lines.append("")
 
     return PlainTextResponse("\n".join(lines) if lines else "No items found.\n")
@@ -191,7 +219,7 @@ async def update_item(
     db: AsyncSession = Depends(get_db),
 ):
     app = _auth_dev(request)
-    post = await _get_post(db, app, number)
+    post = await _get_post(db, app, number, lifecycle_only=True)
     body = await request.json()
 
     new_status = body.get("status")
@@ -203,7 +231,6 @@ async def update_item(
         old_status = post.status
         post.status = new_status
 
-        # Auto-generate system comment for status change
         msg = f"Status changed from **{old_status}** to **{new_status}**."
         if dev_note:
             msg += f"\n\n{dev_note}"
@@ -249,11 +276,10 @@ async def bulk_update_items(
             select(Post).where(
                 Post.app_slug == app.slug,
                 Post.post_number == num,
-                Post.board_type == "structured",
                 Post.deleted_at.is_(None),
             )
         )
-        if post:
+        if post and post.status is not None:  # only lifecycle posts
             old_status = post.status
             post.status = new_status
             post.updated_at = datetime.datetime.utcnow()
@@ -276,6 +302,63 @@ async def bulk_update_items(
 
     await db.commit()
     return JSONResponse({"updated": updated})
+
+
+@router.post("/items/{number}/move")
+async def move_item(
+    request: Request,
+    number: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Move a post to a different forum, optionally changing its post_type."""
+    app = _auth_dev(request)
+    post = await _get_post(db, app, number)
+    body = await request.json()
+
+    target_forum_slug = body.get("forum")
+    new_post_type = body.get("post_type")
+
+    if not target_forum_slug:
+        raise HTTPException(status_code=400, detail="forum is required")
+
+    target_forum = app.get_forum(target_forum_slug)
+    if target_forum is None:
+        raise HTTPException(status_code=404, detail=f"Forum '{target_forum_slug}' not found")
+
+    old_forum = post.forum_slug
+    post.moved_from_forum = old_forum
+    post.forum_slug = target_forum_slug
+
+    if new_post_type:
+        if new_post_type not in target_forum.post_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Post type '{new_post_type}' not allowed in forum '{target_forum_slug}'"
+            )
+        post.post_type = new_post_type
+
+    # If moving to a lifecycle forum and post has no status, set to open
+    if target_forum.forum_type == "lifecycle" and post.status is None:
+        post.status = "open"
+
+    # System comment recording the move
+    msg = f"Moved from **{old_forum}** to **{target_forum_slug}**."
+    if new_post_type:
+        msg += f" Post type changed to **{new_post_type}**."
+    comment = Comment(
+        post_id=post.id,
+        body_markdown=msg,
+        body_html=markdown.markdown(msg),
+        author_email="system",
+        author_role="admin",
+        is_system_comment=True,
+    )
+    db.add(comment)
+
+    post.updated_at = datetime.datetime.utcnow()
+    await db.commit()
+
+    return JSONResponse({"item": _post_to_dict(post)})
 
 
 @router.post("/items/{number}/comment")
@@ -309,6 +392,56 @@ async def dev_comment(
     })
 
 
+@router.post("/items/create")
+async def create_todo(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a post via the dev API (typically a todo item)."""
+    app = _auth_dev(request)
+    body = await request.json()
+
+    forum_slug = body.get("forum", "")
+    forum = app.get_forum(forum_slug)
+    if not forum:
+        raise HTTPException(status_code=400, detail=f"Forum '{forum_slug}' not found")
+
+    post_type = body.get("post_type", "todo")
+    if post_type not in forum.post_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Post type '{post_type}' not allowed in forum '{forum_slug}'"
+        )
+
+    title = body.get("title", "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="title is required")
+
+    body_text = body.get("body", "")
+    fields_data = body.get("fields", {})
+
+    from corkboard.routes.board import _next_post_number
+    post_number = await _next_post_number(db, app.slug)
+
+    post = Post(
+        app_slug=app.slug,
+        post_number=post_number,
+        forum_slug=forum_slug,
+        post_type=post_type,
+        title=title,
+        body_markdown=body_text,
+        body_html=markdown.markdown(body_text) if body_text else "",
+        fields_json=json.dumps(fields_data) if fields_data else None,
+        author_email="developer",
+        author_role="admin",
+        status="open" if forum.forum_type == "lifecycle" else None,
+    )
+    db.add(post)
+    await db.commit()
+
+    return JSONResponse({"item": _post_to_dict(post)})
+
+
 @router.get("/tags")
 async def list_tags(
     request: Request,
@@ -340,14 +473,29 @@ async def set_tags(
     body = await request.json()
     new_tags = body.get("tags", [])
 
-    # Remove existing tags
     for tag in list(post.tags or []):
         await db.delete(tag)
 
-    # Add new tags
     for tag_name in new_tags:
         db.add(ItemTag(post_id=post.id, tag=tag_name.strip()))
 
     await db.commit()
 
     return JSONResponse({"tags": new_tags})
+
+
+@router.get("/forums")
+async def list_forums(request: Request):
+    """List all forums for this app."""
+    app = _auth_dev(request)
+    return JSONResponse({"forums": [
+        {
+            "slug": f.slug,
+            "name": f.name,
+            "type": f.forum_type,
+            "post_types": f.post_types,
+            "read_roles": f.read_roles,
+            "post_roles": f.post_roles,
+        }
+        for f in app.forums
+    ]})

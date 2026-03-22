@@ -109,3 +109,56 @@ a:hover { text-decoration: underline; }
 
 /* Pagination */
 .pagination { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 20px; color: var(--cb-muted); }
+
+/* Forum index */
+.forum-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.forum-card {
+  display: block; background: var(--cb-surface); border: 1px solid var(--cb-border);
+  border-radius: 8px; padding: 20px; text-decoration: none; color: var(--cb-text);
+  transition: border-color 0.15s;
+}
+.forum-card:hover { border-color: var(--cb-accent); text-decoration: none; }
+.forum-card h2 { font-size: 18px; margin-bottom: 8px; }
+.forum-meta { display: flex; gap: 8px; }
+.badge-lifecycle { background: #7c3aed; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.badge-general { background: var(--cb-muted); color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+
+/* Board header */
+.board-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.board-filters { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+
+/* Post type badges */
+.type-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+}
+.type-bug { background: #dc2626; color: white; }
+.type-feature { background: #7c3aed; color: white; }
+.type-todo { background: #2563eb; color: white; }
+.type-general { background: var(--cb-muted); color: white; }
+
+/* Type picker */
+.type-picker { display: flex; flex-direction: column; gap: 12px; }
+.type-option {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--cb-surface); border: 1px solid var(--cb-border);
+  border-radius: 8px; padding: 16px; text-decoration: none; color: var(--cb-text);
+  transition: border-color 0.15s;
+}
+.type-option:hover { border-color: var(--cb-accent); text-decoration: none; }
+
+/* Structured fields */
+.structured-fields {
+  background: var(--cb-surface); border-radius: 8px; padding: 16px; margin: 16px 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.field-row { font-size: 14px; }
+.field-row strong { color: var(--cb-muted); margin-right: 8px; }
+.severity-low { color: #22c55e; }
+.severity-medium { color: #eab308; }
+.severity-high { color: #f97316; }
+.severity-critical { color: #ef4444; font-weight: 700; }
+
+/* Forum nav links */
+.topbar-forum-link { color: var(--cb-muted); font-size: 13px; margin-left: 16px; }
+.topbar-forum-link:hover { color: var(--cb-text); }
