@@ -1,15 +1,19 @@
 /* Corkboard — default styles using CSS variables for theming */
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; }
 
 body {
+  margin: 0; padding: 0;
   font-family: var(--cb-font);
   background: var(--cb-bg);
   color: var(--cb-text);
   line-height: 1.6;
 }
 
-a { color: var(--cb-accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+/* Scope link styles to main content so custom headers are not affected */
+.container a { color: var(--cb-accent); text-decoration: none; }
+.container a:hover { text-decoration: underline; }
+.topbar a { color: inherit; text-decoration: none; }
+.topbar a:hover { text-decoration: underline; }
 
 .topbar {
   display: flex; justify-content: space-between; align-items: center;
