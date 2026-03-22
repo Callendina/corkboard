@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}New {{ post_type | capitalize }} — {{ forum.name }}{% endblock %}
 {% block content %}
-<div class="breadcrumb" style="font-size:13px;margin-bottom:8px">
+<div class="breadcrumb">
     <a href="{{ prefix }}/">All Forums</a>
-    <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>
+    <span class="sep">&rsaquo;</span>
     <a href="{{ prefix }}/f/{{ forum.slug }}">{{ forum.name }}</a>
-    <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>
+    <span class="sep">&rsaquo;</span>
     <span style="color:var(--cb-muted)">New {{ post_type | capitalize }}</span>
 </div>
 <h1>New {{ post_type | capitalize }} in {{ forum.name }}</h1>

@@ -3,11 +3,11 @@
 {% block content %}
 <article class="post-detail">
     <div class="post-header">
-        <div class="breadcrumb" style="font-size:13px;margin-bottom:8px">
+        <div class="breadcrumb">
             <a href="{{ prefix }}/">All Forums</a>
-            <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>
+            <span class="sep">&rsaquo;</span>
             {% if forum %}<a href="{{ prefix }}/f/{{ forum.slug }}">{{ forum.name }}</a>
-            <span style="color:var(--cb-muted);margin:0 6px">&rsaquo;</span>{% endif %}
+            <span class="sep">&rsaquo;</span>{% endif %}
             <span style="color:var(--cb-muted)">#{{ post.post_number }}</span>
         </div>
         <h1>#{{ post.post_number }}: {{ post.title }}</h1>

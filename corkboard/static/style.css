@@ -16,6 +16,10 @@ body {
 .topbar a { color: inherit; text-decoration: none; }
 .topbar a:hover { text-decoration: underline; }
 
+/* Breadcrumb navigation */
+.breadcrumb { font-size: 15px; margin-bottom: 10px; }
+.breadcrumb .sep { color: var(--cb-muted); margin: 0 6px; }
+
 .topbar {
   display: flex; justify-content: space-between; align-items: center;
   background: var(--cb-surface); border-bottom: 1px solid var(--cb-border);
