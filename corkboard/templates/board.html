@@ -32,15 +32,15 @@
 {% endif %}
 
 {% if posts %}
-<table class="post-list">
+<table class="post-list" id="sortable-table">
     <thead>
         <tr>
-            <th>#</th>
-            {% if forum.forum_type == "lifecycle" %}<th>Status</th>{% endif %}
-            <th>Title</th>
-            <th>Votes</th>
-            <th>Author</th>
-            <th>Date</th>
+            <th class="sortable" data-col="0" data-type="num">#</th>
+            {% if forum.forum_type == "lifecycle" %}<th class="sortable" data-col="1" data-type="text">Status</th>{% endif %}
+            <th class="sortable" data-col="{{ 2 if forum.forum_type == 'lifecycle' else 1 }}" data-type="text">Title</th>
+            <th class="sortable" data-col="{{ 3 if forum.forum_type == 'lifecycle' else 2 }}" data-type="num">Votes</th>
+            <th class="sortable" data-col="{{ 4 if forum.forum_type == 'lifecycle' else 3 }}" data-type="text">Author</th>
+            <th class="sortable" data-col="{{ 5 if forum.forum_type == 'lifecycle' else 4 }}" data-type="date">Date</th>
         </tr>
     </thead>
     <tbody>
@@ -69,4 +69,40 @@
     {% if page * per_page < total %}<a href="{{ prefix }}/f/{{ forum.slug }}?page={{ page + 1 }}">Next</a>{% endif %}
 </div>
 {% endif %}
+
+<style>
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--cb-accent)}
+th.sortable::after{content:'';display:inline-block;width:0;height:0;margin-left:4px;vertical-align:middle;border:4px solid transparent}
+th.sortable.asc::after{border-bottom-color:var(--cb-text);border-top:0}
+th.sortable.desc::after{border-top-color:var(--cb-text);border-bottom:0}
+</style>
+<script>
+(function(){
+  var table=document.getElementById('sortable-table');
+  if(!table)return;
+  var heads=table.querySelectorAll('th.sortable');
+  var tbody=table.querySelector('tbody');
+  var curCol=-1,curDir='asc';
+  heads.forEach(function(th){
+    th.addEventListener('click',function(){
+      var col=+th.dataset.col,type=th.dataset.type;
+      if(curCol===col){curDir=curDir==='asc'?'desc':'asc';}
+      else{curCol=col;curDir='asc';}
+      heads.forEach(function(h){h.classList.remove('asc','desc');});
+      th.classList.add(curDir);
+      var rows=Array.from(tbody.querySelectorAll('tr'));
+      rows.sort(function(a,b){
+        var at=a.cells[col].textContent.trim(),bt=b.cells[col].textContent.trim();
+        var v;
+        if(type==='num'){v=(parseFloat(at)||0)-(parseFloat(bt)||0);}
+        else if(type==='date'){v=(new Date(at||0))-(new Date(bt||0));}
+        else{v=at.localeCompare(bt);}
+        return curDir==='desc'?-v:v;
+      });
+      rows.forEach(function(r){tbody.appendChild(r);});
+    });
+  });
+})();
+</script>
 {% endblock %}
