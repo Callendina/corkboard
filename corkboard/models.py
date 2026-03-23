@@ -47,9 +47,9 @@ class Post(Base):
         DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow
     )
 
-    comments: Mapped[list["Comment"]] = relationship(back_populates="post")
-    votes: Mapped[list["Vote"]] = relationship(back_populates="post")
-    tags: Mapped[list["ItemTag"]] = relationship(back_populates="post")
+    comments: Mapped[list["Comment"]] = relationship(back_populates="post", lazy="selectin")
+    votes: Mapped[list["Vote"]] = relationship(back_populates="post", lazy="selectin")
+    tags: Mapped[list["ItemTag"]] = relationship(back_populates="post", lazy="selectin")
 
     @property
     def fields(self) -> dict:

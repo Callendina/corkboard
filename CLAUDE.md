@@ -85,6 +85,7 @@ Posts can be moved via the dev API (`POST /api/dev/items/{number}/move`). The or
 forums:
   - slug: "bugs"
     name: "Bug Reports"
+    description: "Found something broken? Report it here."
     type: "lifecycle"
     post_types: ["bug"]
     read_roles: ["anon", "user", "admin"]
@@ -116,7 +117,11 @@ forums:
 
 ## Developer API
 
-JSON API at `/corkboard/api/dev/...` for lifecycle management. Authenticated via `X-Corkboard-Dev-Key` header (per-app secret, set in config). Not exposed to end users.
+JSON API at `/corkboard/api/dev/...` for lifecycle management. Not exposed to end users.
+
+### Authentication (checked in order)
+1. **Gatekeeper headers** — if `X-Gatekeeper-Role: admin` or `X-Gatekeeper-System-Admin: true` (set by Caddy forward_auth for browser-based admin users)
+2. **X-API-Key header** — matched against the app's `dev_api_key` from its YAML config (for programmatic/CLI access)
 
 Key endpoints:
 - `GET /api/dev/forums` — list all forums for the app
@@ -226,9 +231,22 @@ rate_limits:
 anonymous_access: "read_only"  # "read_only" | "none" | "post_allowed"
 ```
 
+## Headless mode
+
+Append `?layout=headless` to any page URL to get a stripped-down version with no header, transparent background, and minimal chrome. Designed for iframe embedding — the parent app provides its own navbar.
+
+All internal navigation (links, form submits, redirects) automatically preserves the `layout=headless` param via client-side JS and server-side redirect helpers.
+
 ## Theming
 
-Each frontend app provides a `corkboard-theme.json` file with CSS variables and branding. Corkboard's templates use CSS custom properties (`--cb-bg`, `--cb-accent`, etc.) that can be overridden by the theme file. Theme loading is not yet implemented — the default dark theme is used.
+Each frontend app provides a `corkboard-theme.json` file with CSS variables and branding. Corkboard's templates use CSS custom properties (`--cb-bg`, `--cb-accent`, etc.) that are overridden by the theme file.
+
+Theme features:
+- `css_variables` / `css_variables_dark` — light/dark mode CSS variable overrides
+- `extra_css` — additional CSS (e.g. font imports). **Must be first** in the generated `<style>` block so `@import` rules work.
+- `header_html_file` — custom header HTML replacing the default topbar
+- `head_js` — JS snippet injected in `<head>` (e.g. dark mode detection). Runs in both normal and headless modes.
+- `logo_url`, `favicon_url`, `back_url`, `back_label` — branding overrides
 
 ## Key decisions
 
