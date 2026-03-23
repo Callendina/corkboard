@@ -59,6 +59,7 @@ def _post_to_dict(post: Post, include_comments: bool = False) -> dict:
         "vote_count": post.vote_count,
         "dev_note": post.dev_note,
         "done_version": post.done_version,
+        "related_to": post.related_to,
         "fields": post.fields,
         "tags": [t.tag for t in post.tags] if post.tags else [],
         "moved_from_forum": post.moved_from_forum,
@@ -448,6 +449,7 @@ async def create_todo(
 
     body_text = body.get("body", "")
     fields_data = body.get("fields", {})
+    related_to = body.get("related_to")
 
     from corkboard.routes.board import _next_post_number
     post_number = await _next_post_number(db, app.slug)
@@ -464,6 +466,7 @@ async def create_todo(
         author_email="developer",
         author_role="admin",
         status=POST_TYPE_INITIAL_STATUS.get(post_type) if forum.forum_type == "lifecycle" else None,
+        related_to=int(related_to) if related_to else None,
     )
     db.add(post)
     await db.commit()

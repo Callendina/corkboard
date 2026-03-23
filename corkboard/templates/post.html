@@ -21,6 +21,9 @@
             {% if post.scrubbed %}
             <span class="scrubbed-notice" title="Some sensitive content was automatically removed">Scrubbed</span>
             {% endif %}
+            {% if post.related_to %}
+            <a href="{{ prefix }}/post/{{ post.related_to }}" style="font-size:0.85rem;">Related: #{{ post.related_to }}</a>
+            {% endif %}
             {% if post.moved_from_forum %}
             <span style="color:var(--cb-muted); font-size:0.85rem;">Moved from {{ post.moved_from_forum }}</span>
             {% endif %}

@@ -80,6 +80,9 @@ Each forum has `read_roles` and `post_roles` lists. Roles are `anon`, `user`, `a
 ### Moving posts between forums
 Posts can be moved via the dev API (`POST /api/dev/items/{number}/move`). The original forum is recorded in `moved_from_forum`. A system comment is added. If moved to a lifecycle forum, status is set to `open`.
 
+### Related posts
+Posts can link to an originating post via the `related_to` field (post number). Typically used when a todo is created from a bug report or feature request. Set via the dev API `POST /api/dev/items/create` with `"related_to": N`. Displayed as a link in the post detail meta.
+
 ### Forum config example
 ```yaml
 forums:
