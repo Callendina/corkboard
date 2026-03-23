@@ -83,7 +83,8 @@ th.sortable.desc::after{border-top-color:var(--cb-text);border-bottom:0}
   if(!table)return;
   var heads=table.querySelectorAll('th.sortable');
   var tbody=table.querySelector('tbody');
-  var curCol=-1,curDir='asc';
+  var curCol=0,curDir='desc';
+  heads[0].classList.add('desc');
   heads.forEach(function(th){
     th.addEventListener('click',function(){
       var col=+th.dataset.col,type=th.dataset.type;
