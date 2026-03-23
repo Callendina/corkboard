@@ -271,6 +271,10 @@ async def update_item(
     if "blocked_by" in body:
         val = body["blocked_by"]
         post.blocked_by = int(val) if val else None
+    if "fields" in body and isinstance(body["fields"], dict):
+        existing = post.fields
+        existing.update(body["fields"])
+        post.fields_json = json.dumps(existing) if existing else None
 
     post.updated_at = datetime.datetime.utcnow()
     await db.commit()
