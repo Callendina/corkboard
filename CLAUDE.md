@@ -83,6 +83,9 @@ Posts can be moved via the dev API (`POST /api/dev/items/{number}/move`). The or
 ### Related posts
 Posts can link to an originating post via the `related_to` field (post number). Typically used when a todo is created from a bug report or feature request. Set via the dev API `POST /api/dev/items/create` with `"related_to": N`. Displayed as a link in the post detail meta.
 
+### Blocked by (dependencies)
+Todo items can declare a dependency on another post via the `blocked_by` field (post number). Set via the dev API `PATCH /api/dev/items/{number}` with `"blocked_by": N` (or `null` to clear). Also accepted on `POST /api/dev/items/create`. Displayed as a red "Blocked by: #N" link in the post detail meta.
+
 ### Forum config example
 ```yaml
 forums:
