@@ -24,6 +24,9 @@
             {% if post.related_to %}
             <a href="{{ prefix }}/post/{{ post.related_to }}" style="font-size:0.85rem;">Related: #{{ post.related_to }}</a>
             {% endif %}
+            {% if post.blocked_by %}
+            <a href="{{ prefix }}/post/{{ post.blocked_by }}" style="font-size:0.85rem;color:var(--cb-danger);">Blocked by: #{{ post.blocked_by }}</a>
+            {% endif %}
             {% if post.moved_from_forum %}
             <span style="color:var(--cb-muted); font-size:0.85rem;">Moved from {{ post.moved_from_forum }}</span>
             {% endif %}

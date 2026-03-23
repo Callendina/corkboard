@@ -18,6 +18,17 @@ async def init_db(database_url: str):
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add columns that may not exist on older databases
+        await _add_column_if_missing(conn, "posts", "blocked_by", "INTEGER")
+
+
+async def _add_column_if_missing(conn, table: str, column: str, col_type: str):
+    """SQLite-safe: add a column if it doesn't already exist."""
+    from sqlalchemy import text
+    cols = await conn.execute(text(f"PRAGMA table_info({table})"))
+    existing = {row[1] for row in cols}
+    if column not in existing:
+        await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
 
 
 async def get_db():
