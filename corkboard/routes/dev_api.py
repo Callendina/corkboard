@@ -416,7 +416,7 @@ async def dev_comment(
         post_id=post.id,
         body_markdown=text,
         body_html=render_markdown(text),
-        author_email="developer",
+        author_email=body.get("author", "developer"),
         author_role="admin",
         is_dev_comment=True,
     )
@@ -472,7 +472,7 @@ async def create_todo(
         body_markdown=body_text,
         body_html=render_markdown(body_text) if body_text else "",
         fields_json=json.dumps(fields_data) if fields_data else None,
-        author_email="developer",
+        author_email=body.get("author", "developer"),
         author_role="admin",
         status=POST_TYPE_INITIAL_STATUS.get(post_type) if forum.forum_type == "lifecycle" else None,
         related_to=int(related_to) if related_to else None,
