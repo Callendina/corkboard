@@ -224,6 +224,20 @@ async def get_item(
     return JSONResponse({"item": _post_to_dict(post, include_comments=True)})
 
 
+@router.delete("/items/{number}")
+async def delete_item(
+    request: Request,
+    number: int,
+    db: AsyncSession = Depends(get_db),
+):
+    app = _auth_dev(request)
+    post = await _get_post(db, app, number)
+    post.deleted_at = datetime.datetime.utcnow()
+    post.updated_at = post.deleted_at
+    await db.commit()
+    return JSONResponse({"deleted": number})
+
+
 @router.patch("/items/{number}")
 async def update_item(
     request: Request,
