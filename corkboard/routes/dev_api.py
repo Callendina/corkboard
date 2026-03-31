@@ -6,6 +6,7 @@ Authentication (checked in order):
 """
 import datetime
 import json
+import secrets
 from corkboard.rendering import render_markdown
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -42,7 +43,7 @@ def _auth_dev(request: Request) -> AppConfig:
 
     # 2. Check X-API-Key against the app's configured dev_api_key
     api_key = request.headers.get("x-api-key", "")
-    if api_key and app.dev_api_key and api_key == app.dev_api_key:
+    if api_key and app.dev_api_key and secrets.compare_digest(api_key, app.dev_api_key):
         return app
 
     raise HTTPException(status_code=401, detail="Invalid or missing API key")
