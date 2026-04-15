@@ -31,8 +31,8 @@ VALID_POST_TYPES = set(POST_TYPE_FIELDS.keys())
 # Per-post-type lifecycle statuses
 POST_TYPE_STATUSES = {
     "bug": {"open", "acknowledged", "in_progress", "done", "wont_fix", "duplicate"},
-    "feature": {"open", "acknowledged", "in_progress", "done", "wont_fix", "duplicate"},
-    "todo": {"under_review", "under_development", "testing", "done", "wont_do"},
+    "feature": {"open", "acknowledged", "in_progress", "done", "wont_fix", "duplicate", "parked"},
+    "todo": {"under_review", "under_development", "testing", "done", "wont_do", "parked"},
     "general": set(),
 }
 
