@@ -1,0 +1,32 @@
+# Corkboard Docker stack.
+#
+# Build/run on the host:
+#   IMAGE_TAG=latest docker compose build
+#   IMAGE_TAG=latest docker compose up -d
+#
+# Bind mounts:
+#   ./config.yaml      — main config (host-edited; secret_key, database_url etc.)
+#   ./config.d/        — per-tenant fragments (host-managed)
+#   ./data/            — sqlite state + .env
+#
+# Container stdout flows into journald so the cyclops-alloy on the same
+# host picks it up via _SYSTEMD_UNIT=docker.service matcher.
+
+services:
+  corkboard:
+    build: .
+    image: corkboard:${IMAGE_TAG:-latest}
+    container_name: corkboard
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9200:9200"
+    env_file:
+      - ./data/.env
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./config.d:/app/config.d:ro
+      - ./data:/app/data
+    logging:
+      driver: journald
+      options:
+        tag: "{{.Name}}"
