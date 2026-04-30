@@ -239,6 +239,15 @@ async def delete_item(
     post.deleted_at = datetime.datetime.utcnow()
     post.updated_at = post.deleted_at
     await db.commit()
+
+    cyclops.event(
+        "corkboard.post.deleted",
+        post_app=app.slug,
+        forum=post.forum_slug,
+        post_type=post.post_type,
+        post_number=number,
+    )
+
     return JSONResponse({"deleted": number})
 
 
@@ -297,6 +306,18 @@ async def update_item(
     post.updated_at = datetime.datetime.utcnow()
     await db.commit()
     await db.refresh(post)
+
+    if new_status:
+        cyclops.event(
+            "corkboard.post.status_changed",
+            post_app=app.slug,
+            forum=post.forum_slug,
+            post_type=post.post_type,
+            post_number=number,
+            old_status=old_status,
+            new_status=new_status,
+            done_version=done_version or "",
+        )
 
     return JSONResponse({"item": _post_to_dict(post)})
 
@@ -440,6 +461,15 @@ async def dev_comment(
     )
     db.add(comment)
     await db.commit()
+
+    cyclops.event(
+        "corkboard.comment.added",
+        post_app=app.slug,
+        forum=post.forum_slug,
+        post_number=number,
+        comment_kind="dev",
+        masked_author=cyclops.redact_email(comment.author_email or "developer"),
+    )
 
     return JSONResponse({
         "id": comment.id,
