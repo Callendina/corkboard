@@ -7,6 +7,9 @@ Authentication (checked in order):
 import datetime
 import json
 import secrets
+
+import cyclops
+
 from corkboard.rendering import render_markdown
 from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -496,6 +499,15 @@ async def create_todo(
     db.add(post)
     await db.commit()
     await db.refresh(post)
+
+    cyclops.event(
+        "corkboard.post.created",
+        post_app=app.slug,
+        forum=forum_slug,
+        post_type=post_type,
+        post_number=post.post_number,
+        masked_author=cyclops.redact_email(post.author_email or "developer"),
+    )
 
     return JSONResponse({"item": _post_to_dict(post)})
 
