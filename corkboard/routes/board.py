@@ -8,6 +8,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 
+import cyclops
+
 from corkboard.database import get_db
 from corkboard.config import CorkboardConfig, AppConfig, ForumConfig, POST_TYPE_FIELDS, POST_TYPE_INITIAL_STATUS
 from corkboard.auth import RequestUser, get_current_user
@@ -292,6 +294,18 @@ async def create_post(
     db.add(post)
     await db.commit()
 
+    cyclops.event(
+        "corkboard.post.created",
+        post_app=app.slug,
+        forum=forum_slug,
+        post_type=post_type,
+        post_number=post_number,
+        author_role=user.role,
+        masked_author=cyclops.redact_email(user.email) if user.email else "***",
+        scrubbed=title_scrubbed or body_scrubbed,
+        source_kind="board_ui",
+    )
+
     return _redirect(request, f"{_config.mount_prefix}/post/{post_number}")
 
 
@@ -377,6 +391,17 @@ async def add_comment(
     db.add(comment)
     await db.commit()
 
+    cyclops.event(
+        "corkboard.comment.added",
+        post_app=app.slug,
+        forum=post.forum_slug,
+        post_number=number,
+        comment_kind="user",
+        author_role=user.role,
+        masked_author=cyclops.redact_email(user.email) if user.email else "***",
+        scrubbed=was_scrubbed,
+    )
+
     return _redirect(request, f"{_config.mount_prefix}/post/{number}")
 
 
@@ -400,14 +425,27 @@ async def toggle_vote(
     existing = await db.scalar(
         select(Vote).where(Vote.post_id == post.id, Vote.email == user.email)
     )
+    direction = ""
     if existing:
         await db.delete(existing)
         post.vote_count = max(0, post.vote_count - 1)
+        direction = "removed"
     else:
         db.add(Vote(post_id=post.id, email=user.email))
         post.vote_count = post.vote_count + 1
+        direction = "added"
 
     await db.commit()
+
+    cyclops.event(
+        "corkboard.post.voted",
+        post_app=app.slug,
+        forum=post.forum_slug,
+        post_number=number,
+        direction=direction,
+        masked_author=cyclops.redact_email(user.email),
+        new_count=post.vote_count,
+    )
 
     return _redirect(request, f"{_config.mount_prefix}/post/{number}")
 
@@ -431,5 +469,17 @@ async def delete_post(
 
     post.deleted_at = datetime.datetime.utcnow()
     await db.commit()
+
+    cyclops.event(
+        "corkboard.post.deleted",
+        post_app=app.slug,
+        forum=post.forum_slug,
+        post_type=post.post_type,
+        post_number=number,
+        actor_role=user.role,
+        masked_actor=cyclops.redact_email(user.email) if user.email else "***",
+        was_admin_delete=user.is_admin and user.email != post.author_email,
+        source_kind="board_ui",
+    )
 
     return _redirect(request, f"{_config.mount_prefix}/f/{post.forum_slug}")

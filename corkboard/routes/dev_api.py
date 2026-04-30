@@ -246,6 +246,7 @@ async def delete_item(
         forum=post.forum_slug,
         post_type=post.post_type,
         post_number=number,
+        source_kind="dev_api",
     )
 
     return JSONResponse({"deleted": number})
@@ -537,6 +538,7 @@ async def create_todo(
         post_type=post_type,
         post_number=post.post_number,
         masked_author=cyclops.redact_email(post.author_email or "developer"),
+        source_kind="dev_api",
     )
 
     return JSONResponse({"item": _post_to_dict(post)})
