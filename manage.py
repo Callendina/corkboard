@@ -76,7 +76,7 @@ def cmd_provision(env: str) -> None:
     ssh_run(target, "docker --version && docker compose version | head -1")
 
     banner(f"Step 2/4 - Set up {SRV_DIR} and clone repository")
-    ssh_sudo(target, f"mkdir -p {SRV_DIR} && chown {USER}:{USER} {SRV_DIR}")
+    ssh_sudo(target, f"bash -c 'mkdir -p {SRV_DIR} && chown {USER}:{USER} {SRV_DIR}'")
     ssh_run(
         target,
         f"if [ -d {SRV_DIR}/.git ]; then "
