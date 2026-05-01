@@ -1,4 +1,8 @@
 fastapi>=0.110.0
+# starlette 1.0 changed the TemplateResponse signature (request now first
+# positional arg). Pin to the new-API range so older API regressions or
+# unexpected 2.0 jumps don't slip in via fastapi's loose dep range.
+starlette>=1.0,<2.0
 uvicorn>=0.29.0
 sqlalchemy>=2.0.0
 aiosqlite>=0.20.0
