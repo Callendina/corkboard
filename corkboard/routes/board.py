@@ -148,7 +148,7 @@ async def forum_index(
         result = await db.execute(stmt)
         forum_posts[forum.slug] = result.scalars().all()
 
-    return templates.TemplateResponse("forum_index.html", _base_context(
+    return templates.TemplateResponse(request, "forum_index.html", _base_context(
         request, app, user, forums=forums, forum_posts=forum_posts,
     ))
 
@@ -195,7 +195,7 @@ async def forum_view(
         )
     )
 
-    return templates.TemplateResponse("board.html", _base_context(
+    return templates.TemplateResponse(request, "board.html", _base_context(
         request, app, user,
         forum=forum, posts=posts, page=page, total=total or 0, per_page=per_page,
         filter_status=status, filter_post_type=post_type,
@@ -217,7 +217,7 @@ async def new_post_form(
 
     # If forum allows multiple post types and none selected, show type picker
     if not post_type and len(forum.post_types) > 1:
-        return templates.TemplateResponse("new_post_type_picker.html", _base_context(
+        return templates.TemplateResponse(request, "new_post_type_picker.html", _base_context(
             request, app, user, forum=forum,
         ))
 
@@ -227,7 +227,7 @@ async def new_post_form(
 
     type_fields = POST_TYPE_FIELDS.get(pt, {})
 
-    return templates.TemplateResponse("new_post.html", _base_context(
+    return templates.TemplateResponse(request, "new_post.html", _base_context(
         request, app, user, forum=forum, post_type=pt, type_fields=type_fields,
     ))
 
@@ -346,7 +346,7 @@ async def view_post(
 
     type_fields = POST_TYPE_FIELDS.get(post.post_type, {})
 
-    return templates.TemplateResponse("post.html", _base_context(
+    return templates.TemplateResponse(request, "post.html", _base_context(
         request, app, user,
         post=post, forum=forum, comments=comments,
         user_voted=user_voted, type_fields=type_fields,

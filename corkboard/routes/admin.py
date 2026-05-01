@@ -56,8 +56,7 @@ async def admin_dashboard(
     result = await db.execute(posts_stmt)
     posts = result.scalars().all()
 
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "admin.html", {
         "app": app,
         "user": user,
         "prefix": _config.mount_prefix,
