@@ -1,12 +1,13 @@
 """Developer API — lifecycle management, export, tagging, move posts.
 
-Authentication (checked in order):
-1. X-Gatekeeper-* headers with admin role (Caddy forward_auth)
-2. X-API-Key header matching the app's dev_api_key (from YAML config)
+Authentication: requires admin role resolved by Caddy's forward_auth on
+the parent app (X-Gatekeeper-Role: admin OR X-Gatekeeper-System-Admin: true).
+For programmatic access, the caller sends a registered gatekeeper API
+key via X-API-Key; gatekeeper validates it at the edge and sets the role
+headers we read here. Corkboard does not validate keys directly.
 """
 import datetime
 import json
-import secrets
 
 import cyclops
 
@@ -38,18 +39,12 @@ def _auth_dev(request: Request) -> AppConfig:
     if app is None:
         raise HTTPException(status_code=404, detail="Unknown app")
 
-    # 1. Check if already authenticated via Caddy forward_auth (admin)
     gk_role = request.headers.get("x-gatekeeper-role", "")
     gk_admin = request.headers.get("x-gatekeeper-system-admin", "") == "true"
     if gk_role == "admin" or gk_admin:
         return app
 
-    # 2. Check X-API-Key against the app's configured dev_api_key
-    api_key = request.headers.get("x-api-key", "")
-    if api_key and app.dev_api_key and secrets.compare_digest(api_key, app.dev_api_key):
-        return app
-
-    raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    raise HTTPException(status_code=401, detail="Admin role required")
 
 
 def _post_to_dict(post: Post, include_comments: bool = False) -> dict:

@@ -5,7 +5,11 @@ app_slug: "myapp"
 domains:
   - "myapp.example.com"
 app_name: "My App"
-dev_api_key: "change-me"
+# dev_api_key was removed in 2026-05. Programmatic access to
+# /corkboard/api/dev/* now uses gatekeeper-issued API keys — Caddy's
+# forward_auth resolves the key and corkboard reads the resulting
+# X-Gatekeeper-Role header. See corkboard CLAUDE.md "Authentication"
+# for how to wire a new app for HTTPS-direct dev API posting.
 theme_file: "/path/to/corkboard-theme.json"
 
 forums:

@@ -125,9 +125,46 @@ forums:
 
 JSON API at `/corkboard/api/dev/...` for lifecycle management. Not exposed to end users.
 
-### Authentication (checked in order)
-1. **Gatekeeper headers** — if `X-Gatekeeper-Role: admin` or `X-Gatekeeper-System-Admin: true` (set by Caddy forward_auth for browser-based admin users)
-2. **X-API-Key header** — matched against the app's `dev_api_key` from its YAML config (for programmatic/CLI access)
+### Authentication
+
+Single path: caller must have **admin role** as resolved by gatekeeper at
+the Caddy edge. Corkboard reads `X-Gatekeeper-Role: admin` or
+`X-Gatekeeper-System-Admin: true` from its incoming request. Browser
+sessions and registered gatekeeper API keys both produce these headers
+when forward_auth succeeds; corkboard does not validate keys directly.
+
+The previous "internal `dev_api_key` matched against `X-API-Key`" path
+was removed in 2026-05. Programmatic callers (CI, Claude Code, scripts)
+must now use a gatekeeper-issued registered API key with `role: admin`
+for the parent app.
+
+### Wiring a new app for HTTPS-direct dev API access
+
+To make `https://<app-domain>/corkboard/api/dev/*` accept gatekeeper API
+keys end-to-end:
+
+1. **Caddy** — add a dedicated handle block for the dev API path *before*
+   the broader `handle /corkboard/*`, with `header_up X-Forwarded-API-Key`
+   so gatekeeper sees the key:
+   ```caddyfile
+   handle /corkboard/api/dev/* {
+       forward_auth localhost:9100 {
+           uri /_auth/verify
+           header_up X-Forwarded-API-Key {header.X-API-Key}
+           copy_headers X-Gatekeeper-User X-Gatekeeper-Role X-Gatekeeper-Group X-Gatekeeper-System-Admin
+       }
+       reverse_proxy localhost:9200
+   }
+   ```
+2. **Gatekeeper config** — add `/corkboard/api/dev/*` to the app's
+   `api_access.paths`. (If it's currently in `exempt_paths`, remove it
+   from there.) Set `api_access.mode: "key_required"` if not already.
+3. **Gatekeeper DB** — issue a registered API key for the app via the
+   admin UI (`/_auth/admin/api-keys`) bound to a system-admin user, so
+   the X-Gatekeeper-Role header comes through as `admin`.
+
+Once those three are in place, callers send `X-API-Key: <key>` to the
+HTTPS endpoint and corkboard's dev API accepts the request.
 
 Key endpoints:
 - `GET /api/dev/forums` — list all forums for the app

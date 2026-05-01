@@ -75,7 +75,6 @@ class AppConfig:
     slug: str = ""
     domains: list[str] = field(default_factory=list)
     app_name: str = ""
-    dev_api_key: str = ""
     theme_file: str = ""
     forums: list[ForumConfig] = field(default_factory=list)
     webhooks: list[WebhookConfig] = field(default_factory=list)
@@ -141,7 +140,6 @@ def _parse_app_config(slug: str, raw: dict) -> AppConfig:
         slug=slug,
         domains=raw.get("domains", []),
         app_name=raw.get("app_name", raw.get("name", slug)),
-        dev_api_key=raw.get("dev_api_key", ""),
         theme_file=raw.get("theme_file", ""),
         forums=forums,
         webhooks=webhooks,
